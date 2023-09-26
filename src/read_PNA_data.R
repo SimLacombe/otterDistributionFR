@@ -43,11 +43,12 @@ dat <- readxl::read_xlsx(dat.filename) %>%
          presence = as.numeric(statut_obs == "PrÃ©sent"),
          region = "Bretagne", 
          data.provider = "GMB") %>%
-  rename(grid.cell = CODE10KM)
+  rename(grid.cell = CODE10KM,
+         loc = communes)
 
 dat <- dat %>%
   left_join(grid[,c("lon.l93", "lat.l93", "grid.cell"), by = "grid.cell"]) %>%
-  select(data.provider, region, PNA.protocole, year, date, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 otter.dat <- rbind(otter.dat, dat)
 
@@ -66,8 +67,9 @@ dat <- dat %>%
          PNA.protocole = TRUE) %>%
   rename(lon.l93 = `x Lambert93`,
          lat.l93 = `y Lambert93`,
-         grid.cell = `Maille 10 Lambert93`) %>%
-  select(data.provider, region,PNA.protocole, year, date, lon.l93, lat.l93, grid.cell, presence)
+         grid.cell = `Maille 10 Lambert93`,
+         loc = Commune) %>%
+  select(data.provider, region,PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 otter.dat <- rbind(otter.dat, dat)
 
@@ -80,11 +82,12 @@ dat <- readxl::read_xlsx(dat.filename) %>%
          presence = sign(Nombre),
          region = "Limousin",
          data.provider = "GMHL",
-         PNA.protocole = FALSE) %>%
+         PNA.protocole = FALSE,
+         loc = paste(Commune, `Lieu-dit`, sep = ".")) %>%
   rename(lon.l93 = `X Lambert93 [m]`,
          lat.l93 = `Y Lambert93 [m]`,
          grid.cell = Maille) %>%
-  select(data.provider, region, PNA.protocole, year, date, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 otter.dat <- rbind(otter.dat, dat)
 
@@ -104,11 +107,12 @@ dat <- dat %>%
          year = year(date),
          presence = sign(TOTAL_COUNT),
          region = "PACA",
-         data.provider = "LPO") %>%
+         data.provider = "LPO",
+         loc = paste(MUNICIPALITY, PLACE, sep = ".")) %>%
   rename(lon.l93 = COORD_LON_L93,
          lat.l93 = COORD_LAT_L93,
          grid.cell = GRID_NAME) %>%
-  select(data.provider, region, year, PNA.protocole, date, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 otter.dat <- rbind(otter.dat, dat)
 
@@ -125,11 +129,12 @@ dat <- dat %>%
          year = year(date),
          presence = sign(Nombre),
          region = "Anjou",
-         data.provider = "LPO") %>%
+         data.provider = "LPO",
+         loc = paste(Commune, `Lieu-dit`, sep = ".")) %>%
   rename(lon.l93 = `X Lambert93 [m]`,
          lat.l93 = `Y Lambert93 [m]`,
          grid.cell = Maille) %>%
-  select(data.provider, region, year, PNA.protocole, date, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 otter.dat <- rbind(otter.dat, dat)
 
@@ -147,11 +152,12 @@ dat <- dat %>%
          year = year(date),
          presence = sign(TOTAL_COUNT),
          region = "Vendée",
-         data.provider = "LPO") %>%
+         data.provider = "LPO",
+         loc = paste(MUNICIPALITY, PLACE, sep = ".")) %>%
   rename(lon.l93 = COORD_LON_L93,
          lat.l93 = COORD_LAT_L93,
          grid.cell = GRID_NAME) %>%
-  select(data.provider, region, year, PNA.protocole, date, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 otter.dat <- rbind(otter.dat, dat)
 
@@ -163,6 +169,7 @@ dat <- read.csv(dat.filename)
 dat <- dat %>% 
   mutate(PNA.protocole = FALSE, 
          date = NA,
+         loc = NA,
          presence = as.numeric(obs=="presence"),
          region = "Auvergne Rhône-Alpes",
          data.provider = "LPO",
@@ -172,7 +179,7 @@ dat <- dat %>%
   rename(lon.l93 = X,
          lat.l93 = Y,
          year = annee) %>%
-  select(data.provider, region, year, PNA.protocole, date, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 otter.dat <- rbind(otter.dat, dat)
 otter.dat <- otter.dat %>%
