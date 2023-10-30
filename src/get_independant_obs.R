@@ -2,12 +2,7 @@ library(tidyverse)
 library(sf)
 library(concom)
 
-library(LaplacesDemon)
-library(runjags)
-library(rjags)
-library(coda)
-
-rm(list = ls())
+source("src/utility_functions.R")
 
 ### Load data ###
 
@@ -25,17 +20,6 @@ otterDat <- otterDat %>%
 
 thr.space <- 500
 thr.time <- 2
-
-collapse_transects <- function(times, coords, thr.space, thr.time){
-  
-  A.space <- matrix(0, length(coords), length(coords))
-  A.space[as.numeric(st_distance(coords, coords)) < thr.space] <- 1
-  
-  A.time <- matrix(0, length(coords), length(coords))
-  A.time[sapply(times, FUN = function(x){abs(difftime(x, times, units = "days"))}) < thr.time] <- 1
-  
-  concomFromMatAdj(A.time * A.space)[[1]]
-}
 
 otterDat <- otterDat %>% 
   group_by(PNA.protocole, year, grid.cell) %>%
