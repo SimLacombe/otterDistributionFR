@@ -1,7 +1,7 @@
 # INPUTS:
 #   cell_area: log area of grid cells
 #   npixel: number of grid cells
-#   N_po: number of presence-only datapoints
+#   npo: number of presence-only datapoints
 #   nsite: number of presence-absence sites
 #   K: number of secondary sampling occasions for each presence-absence site
 #   x_lam: latent state covariates
@@ -29,14 +29,14 @@
 model{
   ## LATENT MODEL ## 
   for(pixel in 1:npixel){
-    log(lambda[pixel]) <-inprod(x_lam[pixel,], beta) + cell_area
+    log(lambda[pixel]) <-inprod(x_lam[pixel,], beta) + cell_area[pixel]
     z[pixel] ~ dbern(1 - exp(-lambda[pixel]))
     logit(b[pixel]) <-  inprod(x_b[pixel,], alpha)
   } 
   
   ## PRESENCE-ONLY DATA MODEL ##
-  po_denominator <- inprod(lambda[1:npixel], b[1:npixel] ) / N_po
-  for(po in 1:N_po){
+  po_denominator <- inprod(lambda[1:npixel], b[1:npixel] ) / npo
+  for(po in 1:npo){
     ones[po] ~ dbern(
       exp(
         log(lambda[po_pixel[po]]*b[po_pixel[po]]) -
@@ -55,10 +55,10 @@ model{
     beta[latent] ~ dnorm(0, 0.01)
   }
   for(po in 1:ncov_b){
-    cc[po] ~ dlogis(0, 1)
+    alpha[po] ~ dlogis(0, 1)
   }
   for(pa in 1:ncov_rho){
-    a[pa] ~ dlogis(0, 1)
+    gamma[pa] ~ dlogis(0, 1)
   }
 
 }
