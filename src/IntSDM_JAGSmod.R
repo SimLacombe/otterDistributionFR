@@ -29,9 +29,9 @@
 model{
   ## LATENT MODEL ## 
   for(pixel in 1:npixel){
-    log(lambda[pixel]) <-inprod(x_lam[pixel,], beta) + cell_area[pixel]
+    log(lambda[pixel]) <- inprod(x_lam[pixel,], beta) + cell_area[pixel]
     z[pixel] ~ dbern(1 - exp(-lambda[pixel]))
-    logit(b[pixel]) <-  inprod(x_b[pixel,], alpha)
+    logit(b[pixel]) <- inprod(x_b[pixel,], alpha)
   } 
   
   ## PRESENCE-ONLY DATA MODEL ##

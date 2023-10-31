@@ -6,6 +6,7 @@ library(LaplacesDemon)
 library(runjags)
 library(rjags)
 library(coda)
+library(mcmcplots)
 
 rm(list = ls())
 
@@ -38,7 +39,7 @@ otterDat <- otterDat %>%
   arrange(year, grid.cell) %>%
   filter(obs < 6)
 
-### get gridded landscape ### 
+### Get gridded landscape ### 
 
 map.filename <- "data/map_fr.rds"
 grid.filename <- "data/L9310x10grid.rds"
@@ -49,7 +50,10 @@ L93_grid <- readRDS(grid.filename) %>%
   st_intersection(map) %>%
   select(grid.cell)
 
-L93_grid$logArea <- log(as.numeric(st_area(L93_grid)))
+L93_grid$logArea <- log(as.numeric(st_area(L93_grid))/1000**2)
+
+### Get Spatial covariates ### 
+
 L93_grid$intercept <- 1
 
 ### Format data to run JAGS mod ### 
@@ -78,9 +82,9 @@ data.list <- list(cell_area = L93_grid$logArea,
                   npo = nrow(po.dat),
                   nsite = nrow(pa.dat),
                   K = pa.dat$K,
-                  x_lam =  L93_grid$intercept,
-                  x_b = L93_grid$intercept,
-                  x_rho = L93_grid$intercept,
+                  x_lam =  matrix(L93_grid$intercept, nrow(L93_grid), 1),
+                  x_b = matrix(L93_grid$intercept, nrow(L93_grid), 1),
+                  x_rho = matrix(L93_grid$intercept, ),
                   ncov_lam = 1,
                   ncov_b = 1,
                   ncov_rho = 1,
@@ -90,7 +94,8 @@ data.list <- list(cell_area = L93_grid$logArea,
                   ones = po.dat$ones,
                   cste = 1000)
 
-z0 <- as.numeric(sapply(L93_grid$grid.cell, FUN = function(x){x %in% c(po.dat$grid.cell, pa.dat$grid.cell)}))
+z0 <- as.numeric(sapply(L93_grid$grid.cell,
+                        FUN = function(x){x %in% c(po.dat$grid.cell, pa.dat$grid.cell)}))
 
 inits <- list(list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0),
               list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0),
@@ -98,15 +103,38 @@ inits <- list(list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0),
               list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0))
 
 mod <- run.jags(model = "src/intSDM_JAGSmod.R",
-                monitor = c("lambda", "z", "b", "rho", "alpha", "beta", "gamma"),
+                monitor = c("z", "alpha", "beta", "gamma"),
                 data = data.list,
                 n.chains = 4,
                 inits = inits,
                 adapt = 500,
-                burnin = 1000,
-                sample = 1000,
+                burnin = 5000,
+                sample = 5000,
                 thin = 1,
                 summarise = TRUE,
                 plots = TRUE,
                 method = "parallel")
-s
+
+denplot(as.mcmc.list(mod), parms= c("alpha","beta", "gamma"), collapse = FALSE)
+
+mod.mat <- as.matrix(as.mcmc.list(mod), chains = T)
+
+z.est <- mod.mat[, grep("z\\[", colnames(mod.mat))] %>% 
+  apply(2, mean)
+
+riv_nw <- read_sf("data/eu_riv_30s/") %>%
+  st_transform(crs = 2154) %>%
+  st_intersection(map)
+
+ggplot(otterDat)+
+  geom_sf(data = map)+
+  geom_sf(data = L93_grid, aes(fill=z.est), alpha = 0.75) +
+  geom_sf(aes(color = factor(presence), pch = PNA.protocole))+
+  geom_sf(data = riv_nw, aes(alpha = log(UP_CELLS)), color = "#002266", show.legend = FALSE)+
+  scale_color_manual(values = c("red", "blue"))+
+  scale_shape_manual(values = c(4,19))+
+  facet_wrap(~year)+
+  scale_fill_gradient(low = "grey", high = "brown")+
+  theme_bw()
+
+
