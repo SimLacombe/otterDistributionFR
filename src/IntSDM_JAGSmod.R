@@ -29,7 +29,7 @@
 model{
   ## LATENT MODEL ## 
   for(pixel in 1:npixel){
-    log(lambda[pixel]) <- inprod(x_lam[pixel,], beta) + cell_area[pixel]
+    log(lambda[pixel]) <- inprod(x_lam[pixel,], beta) + cell_area[pixel] + eta[pixel]
     z[pixel] ~ dbern(1 - exp(-lambda[pixel]))
     logit(b[pixel]) <- inprod(x_b[pixel,], alpha)
   } 
@@ -50,6 +50,8 @@ model{
     y[site] ~ dbin(z[pa_pixel[site]] * rho[site], K[site])
   }
   
+  eta[1:npixel] ~ dmnorm(zeroes[1:npixel], Q[1:npixel, 1:npixel])
+  
   ## PRIORS ##
   for(latent in 1:ncov_lam){
     beta[latent] ~ dnorm(0, 0.01)
@@ -60,7 +62,6 @@ model{
   for(pa in 1:ncov_rho){
     gamma[pa] ~ dlogis(0, 1)
   }
-
 }
 
 

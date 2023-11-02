@@ -1,4 +1,5 @@
 library(tidyverse)
+library(foreach)
 library(sf)
 library(concom)
 
@@ -46,11 +47,14 @@ grid.filename <- "data/L9310x10grid.rds"
 
 map <- readRDS(map.filename) %>%
   filter(code_insee == "93")
+
 L93_grid <- readRDS(grid.filename) %>%
   st_intersection(map) %>%
-  select(grid.cell)
+  dplyr::select(grid.cell)
 
 L93_grid$logArea <- log(as.numeric(st_area(L93_grid))/1000**2)
+
+npx <- nrow(L93_grid)
 
 ### Get Spatial covariates ### 
 
@@ -75,15 +79,24 @@ po.dat <- otterDat %>%
 po.dat$pixel <- sapply(po.dat$ grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
 po.dat$ones <- 1
 
+### Get Laplacian matrix of the L93 grid ### 
+
+cplx_crd <- complex(real = substr(L93_grid$grid.cell, 2,4),
+                             imaginary = substr(L93_grid$grid.cell, 6,8))
+A.mat <- sapply(cplx_crd, FUN = function(x){as.numeric(abs(x-cplx_crd) <= sqrt(2))})
+D.mat <- diag(apply(A.mat,1,sum))
+
+Q.mat <- D.mat - A.mat 
+
 ### Fit JAGS mod ### 
 
 data.list <- list(cell_area = L93_grid$logArea,
-                  npixel = nrow(L93_grid),
+                  npixel = npx,
                   npo = nrow(po.dat),
                   nsite = nrow(pa.dat),
                   K = pa.dat$K,
-                  x_lam =  matrix(L93_grid$intercept, nrow(L93_grid), 1),
-                  x_b = matrix(L93_grid$intercept, nrow(L93_grid), 1),
+                  x_lam =  matrix(L93_grid$intercept, npx, 1),
+                  x_b = matrix(L93_grid$intercept, npx, 1),
                   x_rho = matrix(L93_grid$intercept, ),
                   ncov_lam = 1,
                   ncov_b = 1,
@@ -92,34 +105,39 @@ data.list <- list(cell_area = L93_grid$logArea,
                   pa_pixel = pa.dat$pixel,
                   y = pa.dat$y,
                   ones = po.dat$ones,
-                  cste = 1000)
+                  cste = 1000,
+                  Q = diag(1, npx, npx) + Q.mat,
+                  zeroes = rep(0,npx))
 
 z0 <- as.numeric(sapply(L93_grid$grid.cell,
                         FUN = function(x){x %in% c(po.dat$grid.cell, pa.dat$grid.cell)}))
 
-inits <- list(list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0),
-              list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0),
-              list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0),
-              list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0))
+inits <- list(list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0, eta = rep(0, npx)),
+              list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0, eta = rep(0, npx)),
+              list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0, eta = rep(0, npx)),
+              list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0, eta = rep(0, npx)))
 
 mod <- run.jags(model = "src/intSDM_JAGSmod.R",
-                monitor = c("z", "alpha", "beta", "gamma"),
+                monitor = c("z", "alpha", "beta", "gamma", "eta"),
                 data = data.list,
                 n.chains = 4,
                 inits = inits,
-                adapt = 500,
-                burnin = 5000,
-                sample = 5000,
+                adapt = 100,
+                burnin = 1000,
+                sample = 500,
                 thin = 1,
                 summarise = TRUE,
                 plots = TRUE,
                 method = "parallel")
 
-denplot(as.mcmc.list(mod), parms= c("alpha","beta", "gamma"), collapse = FALSE)
+denplot(as.mcmc.list(mod), parms= c("tau"), collapse = FALSE)
 
 mod.mat <- as.matrix(as.mcmc.list(mod), chains = T)
 
 z.est <- mod.mat[, grep("z\\[", colnames(mod.mat))] %>% 
+  apply(2, mean)
+
+eta.est <- mod.mat[, grep("eta\\[", colnames(mod.mat))] %>% 
   apply(2, mean)
 
 riv_nw <- read_sf("data/eu_riv_30s/") %>%
@@ -128,13 +146,13 @@ riv_nw <- read_sf("data/eu_riv_30s/") %>%
 
 ggplot(otterDat)+
   geom_sf(data = map)+
-  geom_sf(data = L93_grid, aes(fill=z.est), alpha = 0.75) +
+  geom_sf(data = L93_grid, aes(fill=eta.est), alpha = 0.75) +
   geom_sf(aes(color = factor(presence), pch = PNA.protocole))+
   geom_sf(data = riv_nw, aes(alpha = log(UP_CELLS)), color = "#002266", show.legend = FALSE)+
   scale_color_manual(values = c("red", "blue"))+
   scale_shape_manual(values = c(4,19))+
   facet_wrap(~year)+
-  scale_fill_gradient(low = "grey", high = "brown")+
+  scale_fill_gradient2(low = "firebrick2", mid= "white", high = "springgreen4", midpoint = 0)+
   theme_bw()
 
 
