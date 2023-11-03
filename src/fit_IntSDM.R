@@ -18,7 +18,7 @@ source("src/utility_functions.R")
 data.filename <- "data/otterDat.rds"
 
 otterDat <- readRDS(data.filename) %>% 
-  filter(year == 2020) %>%
+  filter(year == 2021) %>%
   st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)
 
 ### Keep only PACA 2020 ###
@@ -95,9 +95,11 @@ data.list <- list(cell_area = L93_grid$logArea,
                   npo = nrow(po.dat),
                   nsite = nrow(pa.dat),
                   K = pa.dat$K,
+                  x_psi =  matrix(L93_grid$intercept, npx, 1),
                   x_lam =  matrix(L93_grid$intercept, npx, 1),
                   x_b = matrix(L93_grid$intercept, npx, 1),
                   x_rho = matrix(L93_grid$intercept, ),
+                  ncov_psi = 1,
                   ncov_lam = 1,
                   ncov_b = 1,
                   ncov_rho = 1,
@@ -105,39 +107,34 @@ data.list <- list(cell_area = L93_grid$logArea,
                   pa_pixel = pa.dat$pixel,
                   y = pa.dat$y,
                   ones = po.dat$ones,
-                  cste = 1000,
-                  Q = diag(1, npx, npx) + Q.mat,
-                  zeroes = rep(0,npx))
+                  cste = 1000)
 
 z0 <- as.numeric(sapply(L93_grid$grid.cell,
                         FUN = function(x){x %in% c(po.dat$grid.cell, pa.dat$grid.cell)}))
 
-inits <- list(list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0, eta = rep(0, npx)),
-              list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0, eta = rep(0, npx)),
-              list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0, eta = rep(0, npx)),
-              list(beta = 0, alpha = logit(0.5), gamma = logit(0.5), z = z0, eta = rep(0, npx)))
+inits <- list(list(alpha = 0, beta = logit(0.5), gamma = logit(0.5), delta = logit(0.5),  z = z0),
+              list(alpha = 0, beta = logit(0.5), gamma = logit(0.5), delta = logit(0.5),  z = z0),
+              list(alpha = 0, beta = logit(0.5), gamma = logit(0.5), delta = logit(0.5),  z = z0),
+              list(alpha = 0, beta = logit(0.5), gamma = logit(0.5), delta = logit(0.5),  z = z0))
 
-mod <- run.jags(model = "src/intSDM_JAGSmod.R",
-                monitor = c("z", "alpha", "beta", "gamma", "eta"),
+mod <- run.jags(model = "src/intSDM2_JAGSmod.R",
+                monitor = c("z", "alpha", "beta", "gamma", "delta"),
                 data = data.list,
                 n.chains = 4,
                 inits = inits,
-                adapt = 100,
-                burnin = 1000,
-                sample = 500,
+                adapt = 500,
+                burnin = 5000,
+                sample = 5000,
                 thin = 1,
                 summarise = TRUE,
                 plots = TRUE,
                 method = "parallel")
 
-denplot(as.mcmc.list(mod), parms= c("tau"), collapse = FALSE)
+denplot(as.mcmc.list(mod), parms= c("alpha", "beta", "gamma", "delta"), collapse = FALSE)
 
 mod.mat <- as.matrix(as.mcmc.list(mod), chains = T)
 
 z.est <- mod.mat[, grep("z\\[", colnames(mod.mat))] %>% 
-  apply(2, mean)
-
-eta.est <- mod.mat[, grep("eta\\[", colnames(mod.mat))] %>% 
   apply(2, mean)
 
 riv_nw <- read_sf("data/eu_riv_30s/") %>%
@@ -146,7 +143,7 @@ riv_nw <- read_sf("data/eu_riv_30s/") %>%
 
 ggplot(otterDat)+
   geom_sf(data = map)+
-  geom_sf(data = L93_grid, aes(fill=eta.est), alpha = 0.75) +
+  geom_sf(data = L93_grid, aes(fill=z.est), alpha = 0.75) +
   geom_sf(aes(color = factor(presence), pch = PNA.protocole))+
   geom_sf(data = riv_nw, aes(alpha = log(UP_CELLS)), color = "#002266", show.legend = FALSE)+
   scale_color_manual(values = c("red", "blue"))+
@@ -154,5 +151,3 @@ ggplot(otterDat)+
   facet_wrap(~year)+
   scale_fill_gradient2(low = "firebrick2", mid= "white", high = "springgreen4", midpoint = 0)+
   theme_bw()
-
-
