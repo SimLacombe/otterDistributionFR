@@ -18,7 +18,6 @@ source("src/utility_functions.R")
 data.filename <- "data/otterDat.rds"
 
 otterDat <- readRDS(data.filename) %>% 
-  filter(year == 2021) %>%
   st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)
 
 ### Keep only PACA 2020 ###
@@ -54,7 +53,7 @@ L93_grid <- readRDS(grid.filename) %>%
 
 L93_grid$logArea <- log(as.numeric(st_area(L93_grid))/1000**2)
 
-npx <- nrow(L93_grid)
+npixel <- nrow(L93_grid)
 
 ### Get Spatial covariates ### 
 
@@ -62,80 +61,113 @@ L93_grid$intercept <- 1
 
 ### Format data to run JAGS mod ### 
 
+sites <- unique(otterDat$grid.cell)
+years <- unique(otterDat$year)
+
+nsite <- length(sites)
+nyear <- length(years)
+
 pa.dat <- otterDat %>%
   st_drop_geometry() %>%
   filter(PNA.protocole) %>%
-  group_by(grid.cell) %>%
+  group_by(grid.cell, year) %>%
   summarize(K = n(),
-            y = sum(presence))
-pa.dat$pixel <- sapply(pa.dat$ grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
+            y = sum(presence)) %>% 
+  ungroup
+
+y <- K <- matrix(0, nsite, nyear)
+for(s in 1:nsite){
+  for (t in 1:nyear){
+    y[s,t] <- max(0, pa.dat %>% 
+      filter(year == years[t], grid.cell == sites[s]) %>%
+      .$y)
+    K[s,t] <- max(0, pa.dat %>% 
+      filter(year == years[t], grid.cell == sites[s]) %>%
+      .$K)
+  }
+}
+
+pa_pixel <- sapply(sites, FUN = function(x){which(L93_grid$grid.cell == x)})
 
 po.dat <- otterDat %>%
   st_drop_geometry() %>%
   filter(!PNA.protocole, as.logical(presence)) %>%
-  group_by(grid.cell) %>%
+  group_by(year, grid.cell) %>%
   summarize()
 
 po.dat$pixel <- sapply(po.dat$ grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
 po.dat$ones <- 1
 
+npo <- po.dat %>%
+  group_by(year) %>%
+  summarize(n = n()) %>% 
+  .$n
+
+po.idxs <- c(0, cumsum(npo))
+
 ### Get Laplacian matrix of the L93 grid ### 
 
 cplx_crd <- complex(real = substr(L93_grid$grid.cell, 2,4),
                              imaginary = substr(L93_grid$grid.cell, 6,8))
-A.mat <- sapply(cplx_crd, FUN = function(x){as.numeric(abs(x-cplx_crd) <= sqrt(2))})
-D.mat <- diag(apply(A.mat,1,sum))
+D.mat <- sapply(cplx_crd, FUN = function(x){as.numeric(abs(x-cplx_crd))})
 
-Q.mat <- D.mat - A.mat 
 
 ### Fit JAGS mod ### 
 
 data.list <- list(cell_area = L93_grid$logArea,
-                  npixel = npx,
-                  npo = nrow(po.dat),
-                  nsite = nrow(pa.dat),
-                  K = pa.dat$K,
-                  x_psi =  matrix(L93_grid$intercept, npx, 1),
-                  x_lam =  matrix(L93_grid$intercept, npx, 1),
-                  x_b = matrix(L93_grid$intercept, npx, 1),
-                  x_rho = matrix(L93_grid$intercept, ),
+                  nyear= nyear,
+                  npixel = npixel,
+                  npo = npo,
+                  po.idxs = po.idxs,
+                  nsite = nsite,
+                  x_psi =  matrix(L93_grid$intercept, npixel, 1),
+                  x_lam =  matrix(L93_grid$intercept, npixel, 1),
+                  x_b = matrix(L93_grid$intercept, npixel, 1),
+                  x_rho = matrix(L93_grid$intercept, npixel, 1),
                   ncov_psi = 1,
                   ncov_lam = 1,
                   ncov_b = 1,
                   ncov_rho = 1,
                   po_pixel = po.dat$pixel,
-                  pa_pixel = pa.dat$pixel,
-                  y = pa.dat$y,
+                  pa_pixel = pa_pixel,
+                  y = y,
+                  K = K,
+                  # D = exp(-D.mat),
                   ones = po.dat$ones,
                   cste = 1000)
 
-z0 <- as.numeric(sapply(L93_grid$grid.cell,
-                        FUN = function(x){x %in% c(po.dat$grid.cell, pa.dat$grid.cell)}))
+z0 <- matrix(1, npixel, nyear)
 
-inits <- list(list(alpha = 0, beta = logit(0.5), gamma = logit(0.5), delta = logit(0.5),  z = z0),
-              list(alpha = 0, beta = logit(0.5), gamma = logit(0.5), delta = logit(0.5),  z = z0),
-              list(alpha = 0, beta = logit(0.5), gamma = logit(0.5), delta = logit(0.5),  z = z0),
-              list(alpha = 0, beta = logit(0.5), gamma = logit(0.5), delta = logit(0.5),  z = z0))
+inits <- list(list(beta_psi = logit(0.5), beta_lam = 0, beta_b = logit(0.5),
+                   beta_rho = logit(0.5), gamma0 = 0.5, sigma = 1,  z = z0),
+              list(beta_psi = logit(0.5), beta_lam = 0, beta_b = logit(0.5),
+                   beta_rho = logit(0.5), gamma0 = 0.5, sigma = 1, z = z0),
+              list(beta_psi = logit(0.5), beta_lam = 0, beta_b = logit(0.5),
+                   beta_rho = logit(0.5), gamma0 = 0.5, sigma = 1, z = z0),
+              list(beta_psi = logit(0.5), beta_lam = 0, beta_b = logit(0.5),
+                   beta_rho = logit(0.5), gamma0 = 0.5, sigma = 1, z = z0))
 
 mod <- run.jags(model = "src/intSDM2_JAGSmod.R",
-                monitor = c("z", "alpha", "beta", "gamma", "delta"),
+                monitor = c("z", "beta_psi", "beta_lam", "beta_b", "beta_rho", "beta_gam"),
                 data = data.list,
                 n.chains = 4,
                 inits = inits,
-                adapt = 500,
-                burnin = 5000,
-                sample = 5000,
+                adapt = 100,
+                burnin = 1000,
+                sample = 1000,
                 thin = 1,
                 summarise = TRUE,
                 plots = TRUE,
                 method = "parallel")
 
-denplot(as.mcmc.list(mod), parms= c("alpha", "beta", "gamma", "delta"), collapse = FALSE)
+denplot(as.mcmc.list(mod), parms= c("beta_psi", "beta_lam", "beta_b", "beta_rho", "beta_gam"), collapse = FALSE)
 
 mod.mat <- as.matrix(as.mcmc.list(mod), chains = T)
 
-z.est <- mod.mat[, grep("z\\[", colnames(mod.mat))] %>% 
-  apply(2, mean)
+z.est <- data.frame(z.est = apply(mod.mat[, grep("z\\[", colnames(mod.mat))], 2, mean),
+                    year = rep(years, each = npixel),
+                    pixel = rep(1:npixel, nyear))
+  
 
 riv_nw <- read_sf("data/eu_riv_30s/") %>%
   st_transform(crs = 2154) %>%
@@ -143,7 +175,7 @@ riv_nw <- read_sf("data/eu_riv_30s/") %>%
 
 ggplot(otterDat)+
   geom_sf(data = map)+
-  geom_sf(data = L93_grid, aes(fill=z.est), alpha = 0.75) +
+  geom_sf(data = z.est, aes(geometry = rep(L93_grid$geometry, nyear), fill=z.est), alpha = 0.75) +
   geom_sf(aes(color = factor(presence), pch = PNA.protocole))+
   geom_sf(data = riv_nw, aes(alpha = log(UP_CELLS)), color = "#002266", show.legend = FALSE)+
   scale_color_manual(values = c("red", "blue"))+
