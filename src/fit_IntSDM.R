@@ -20,7 +20,7 @@ data.filename <- "data/otterDat.rds"
 otterDat <- readRDS(data.filename) %>% 
   st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)
 
-### Keep only PACA 2020 ###
+### Keep only PACA ###
 
 otterDat <- otterDat %>% 
   filter(region == "PACA")
@@ -61,33 +61,22 @@ L93_grid$intercept <- 1
 
 ### Format data to run JAGS mod ### 
 
-sites <- unique(otterDat$grid.cell)
-years <- unique(otterDat$year)
-
-nsite <- length(sites)
-nyear <- length(years)
+nyear <- length(unique(pa.dat$year))
 
 pa.dat <- otterDat %>%
   st_drop_geometry() %>%
   filter(PNA.protocole) %>%
-  group_by(grid.cell, year) %>%
+  group_by(year, grid.cell) %>%
   summarize(K = n(),
-            y = sum(presence)) %>% 
-  ungroup
+            y = sum(presence))
 
-y <- K <- matrix(0, nsite, nyear)
-for(s in 1:nsite){
-  for (t in 1:nyear){
-    y[s,t] <- max(0, pa.dat %>% 
-      filter(year == years[t], grid.cell == sites[s]) %>%
-      .$y)
-    K[s,t] <- max(0, pa.dat %>% 
-      filter(year == years[t], grid.cell == sites[s]) %>%
-      .$K)
-  }
-}
+pa.dat$pixel <- sapply(pa.dat$grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
 
-pa_pixel <- sapply(sites, FUN = function(x){which(L93_grid$grid.cell == x)})
+npa <- pa.dat %>%
+  group_by(year) %>%
+  summarize(n = n()) %>% 
+  .$n
+pa.idxs <- c(0, cumsum(npa))
 
 po.dat <- otterDat %>%
   st_drop_geometry() %>%
@@ -95,14 +84,13 @@ po.dat <- otterDat %>%
   group_by(year, grid.cell) %>%
   summarize()
 
-po.dat$pixel <- sapply(po.dat$ grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
+po.dat$pixel <- sapply(po.dat$grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
 po.dat$ones <- 1
 
 npo <- po.dat %>%
   group_by(year) %>%
   summarize(n = n()) %>% 
   .$n
-
 po.idxs <- c(0, cumsum(npo))
 
 ### Get Laplacian matrix of the L93 grid ### 
@@ -115,44 +103,37 @@ D.mat <- sapply(cplx_crd, FUN = function(x){as.numeric(abs(x-cplx_crd))})
 ### Fit JAGS mod ### 
 
 data.list <- list(cell_area = L93_grid$logArea,
-                  nyear= nyear,
                   npixel = npixel,
+                  nyear = nyear,
                   npo = npo,
                   po.idxs = po.idxs,
-                  nsite = nsite,
-                  x_psi =  matrix(L93_grid$intercept, npixel, 1),
+                  pa.idxs = pa.idxs,
                   x_lam =  matrix(L93_grid$intercept, npixel, 1),
                   x_b = matrix(L93_grid$intercept, npixel, 1),
-                  x_rho = matrix(L93_grid$intercept, npixel, 1),
-                  ncov_psi = 1,
+                  x_rho =  matrix(L93_grid$intercept, npixel, 1),
                   ncov_lam = 1,
                   ncov_b = 1,
                   ncov_rho = 1,
                   po_pixel = po.dat$pixel,
-                  pa_pixel = pa_pixel,
-                  y = y,
-                  K = K,
-                  # D = exp(-D.mat),
+                  pa_pixel = pa.dat$pixel,
+                  y = pa.dat$y,
+                  K = pa.dat$K,
                   ones = po.dat$ones,
                   cste = 1000)
 
 z0 <- matrix(1, npixel, nyear)
 
-inits <- list(list(beta_psi = logit(0.5), beta_lam = 0, beta_b = logit(0.5),
-                   beta_rho = logit(0.5), gamma0 = 0.5, sigma = 1,  z = z0),
-              list(beta_psi = logit(0.5), beta_lam = 0, beta_b = logit(0.5),
-                   beta_rho = logit(0.5), gamma0 = 0.5, sigma = 1, z = z0),
-              list(beta_psi = logit(0.5), beta_lam = 0, beta_b = logit(0.5),
-                   beta_rho = logit(0.5), gamma0 = 0.5, sigma = 1, z = z0),
-              list(beta_psi = logit(0.5), beta_lam = 0, beta_b = logit(0.5),
-                   beta_rho = logit(0.5), gamma0 = 0.5, sigma = 1, z = z0))
+inits <- list(list(beta_rho = 0, beta_lam = -17.5, beta_b = 0, u = rep(0, npixel), v = rep(0, nyear), z = z0),
+              list(beta_rho = 0, beta_lam = -17.5, beta_b = 0, u = rep(0, npixel), v = rep(0, nyear), z = z0),
+              list(beta_rho = 0, beta_lam = -17.5, beta_b = 0, u = rep(0, npixel), v = rep(0, nyear), z = z0),
+              list(beta_rho = 0, beta_lam = -17.5, beta_b = 0, u = rep(0, npixel), v = rep(0, nyear), z = z0))
 
-mod <- run.jags(model = "src/intSDM2_JAGSmod.R",
-                monitor = c("z", "beta_psi", "beta_lam", "beta_b", "beta_rho", "beta_gam"),
+mod <- run.jags(model = "src/intSDM_JAGSmod.R",
+                monitor = c("z", "lambda", "beta_lam", "beta_rho", "beta_b", "u", "v"),
                 data = data.list,
                 n.chains = 4,
                 inits = inits,
-                adapt = 100,
+                adapt = 500,
                 burnin = 1000,
                 sample = 1000,
                 thin = 1,
@@ -160,26 +141,39 @@ mod <- run.jags(model = "src/intSDM2_JAGSmod.R",
                 plots = TRUE,
                 method = "parallel")
 
-denplot(as.mcmc.list(mod), parms= c("beta_psi", "beta_lam", "beta_b", "beta_rho", "beta_gam"), collapse = FALSE)
+denplot(as.mcmc.list(mod), parms= c("beta_lam", "beta_rho", "beta_b"), collapse = FALSE)
 
 mod.mat <- as.matrix(as.mcmc.list(mod), chains = T)
 
-z.est <- data.frame(z.est = apply(mod.mat[, grep("z\\[", colnames(mod.mat))], 2, mean),
-                    year = rep(years, each = npixel),
-                    pixel = rep(1:npixel, nyear))
-  
+z.est <- apply(mod.mat[, grep("z\\[", colnames(mod.mat))], 2, mean)
+u.est <- apply(mod.mat[, grep("u\\[", colnames(mod.mat))], 2, mean)
+v.est <- apply(mod.mat[, grep("v\\[", colnames(mod.mat))], 2, mean)
+beta_lam.est <- mean(mod.mat[, "beta_lam"])
 
-riv_nw <- read_sf("data/eu_riv_30s/") %>%
-  st_transform(crs = 2154) %>%
-  st_intersection(map)
+lam.est <- exp(
+  matrix(rep(u.est, nyear), npixel, nyear) +   
+  matrix(rep(L93_grid$logArea, nyear), npixel, nyear) +   
+  matrix(rep(v.est, npixel), npixel, nyear, byrow = T) +
+  beta_lam.est)
 
-ggplot(otterDat)+
-  geom_sf(data = map)+
-  geom_sf(data = z.est, aes(geometry = rep(L93_grid$geometry, nyear), fill=z.est), alpha = 0.75) +
-  geom_sf(aes(color = factor(presence), pch = PNA.protocole))+
+lam.est.df <- data.frame(mean.lam = c(lam.est),
+                         year = rep(unique(otterDat$year), each = npixel),
+                         px = rep(1:npixel, nyear))
+
+# riv_nw <- read_sf("data/eu_riv_30s/") %>%
+#   st_transform(crs = 2154) %>%
+#   st_intersection(map)
+
+ggplot(map)+
+  geom_sf()+
+  geom_sf(data = lam.est.df, aes(geometry = rep(L93_grid$geometry, nyear), fill = 1 - exp(-mean.lam)), alpha = 0.85) +
+  geom_sf(data = otterDat, aes(color = factor(presence), pch = PNA.protocole))+
   geom_sf(data = riv_nw, aes(alpha = log(UP_CELLS)), color = "#002266", show.legend = FALSE)+
   scale_color_manual(values = c("red", "blue"))+
   scale_shape_manual(values = c(4,19))+
+  scale_fill_gradient(low = "white", high = "springgreen4", name = "psi")+
   facet_wrap(~year)+
-  scale_fill_gradient2(low = "firebrick2", mid= "white", high = "springgreen4", midpoint = 0)+
   theme_bw()
+
+
+

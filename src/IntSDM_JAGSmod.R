@@ -21,46 +21,64 @@
 #   z[npixel]: estimated latent occupancy 
 #   b[npixel]: estimated presence-only detection probabilities
 #   rho[nsite]: estimated presence-absence detection probabilities
-#   beta: log-linear predictors for lambda
-#   alpha: logit-linear predictors for b
-#   gamma: logit-linear predictors for rho
+#   u[npixel]: estiamted spatial random effect on lambda
+#   beta_lam: log-linear predictors for lambda
+#   beta_b: logit-linear predictors for b
+#   beta_rho: logit-linear predictors for rho
 
 
 model{
   ## LATENT MODEL ## 
-  for(pixel in 1:npixel){
-    log(lambda[pixel]) <- inprod(x_lam[pixel,], beta) + cell_area[pixel] + eta[pixel]
-    z[pixel] ~ dbern(1 - exp(-lambda[pixel]))
-    logit(b[pixel]) <- inprod(x_b[pixel,], alpha)
-  } 
+  for(t in 1:nyear){
+    for(pixel in 1:npixel){
+      log(lambda[pixel, t]) <- inprod(x_lam[pixel,], beta_lam) + u[pixel] + v[t] + cell_area[pixel]
+      z[pixel, t] ~ dbern(1 - exp(-lambda[pixel, t]))
+    } 
+  }
+
   
   ## PRESENCE-ONLY DATA MODEL ##
-  po_denominator <- inprod(lambda[1:npixel], b[1:npixel] ) / npo
-  for(po in 1:npo){
-    ones[po] ~ dbern(
-      exp(
-        log(lambda[po_pixel[po]]*b[po_pixel[po]]) -
-          log(po_denominator)
-      ) / cste
-    )
-  } 
-  ## PRESENCE-ABSENCE DATA MODEL ##
-  for(site in 1:nsite){
-    logit(rho[site]) <-inprod(x_rho[pa_pixel[site], ], gamma)
-    y[site] ~ dbin(z[pa_pixel[site]] * rho[site], K[site])
+  for(t in 1:nyear){
+    po_denominator[t] <- inprod(lambda[1:npixel, t], b[1:npixel] ) / npo[t]
+    for(po in (po.idxs[t]+1):po.idxs[t+1]){
+      ones[po] ~ dbern(
+        exp(
+          log(lambda[po_pixel[po], t]*b[po_pixel[po]]) -
+            log(po_denominator[t])
+        ) / cste
+      )
+    } 
   }
   
-  eta[1:npixel] ~ dmnorm(zeroes[1:npixel], Q[1:npixel, 1:npixel])
+  ## PRESENCE-ABSENCE DATA MODEL ##
+  for(t in 1:nyear){
+    for(pa in (pa.idxs[t]+1):pa.idxs[t+1]){
+      y[pa] ~ dbin(z[pa_pixel[pa], t] * rho[pa_pixel[pa]], K[pa])
+    }
+  }
+  
+  ## LINEAR PREDICTORS
+  for(pixel in 1:npixel){
+    logit(b[pixel]) <- inprod(x_b[pixel,], beta_b)
+    logit(rho[pixel]) <-inprod(x_rho[pixel, ], beta_rho)
+  }
+  
   
   ## PRIORS ##
-  for(latent in 1:ncov_lam){
-    beta[latent] ~ dnorm(0, 0.01)
+  for(cov in 1:ncov_lam){
+    beta_lam[cov] ~ dnorm(0, 0.01)
   }
-  for(po in 1:ncov_b){
-    alpha[po] ~ dlogis(0, 1)
+  for(cov in 1:ncov_b){
+    beta_b[cov] ~ dlogis(0, 1)
   }
-  for(pa in 1:ncov_rho){
-    gamma[pa] ~ dlogis(0, 1)
+  for(cov in 1:ncov_rho){
+    beta_rho[cov] ~ dlogis(0, 1)
+  }
+  for(pixel in 1:npixel){
+    u[pixel] ~ dnorm(0,0.01)
+  }
+  for(t in 1:nyear){
+    v[t] ~ dnorm(0,0.01)
   }
 }
 
