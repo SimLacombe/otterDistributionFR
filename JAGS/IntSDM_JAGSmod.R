@@ -5,10 +5,10 @@
 #   nsite: number of presence-absence sites
 #   K: number of secondary sampling occasions for each presence-absence site
 #   x_lam: latent state covariates
-#   x_b: presence-only detection covariates
+#   x_thin: presence-only detection covariates
 #   x_rho: presence-absence detection covariates
 #   ncov_lam: number of covariates for lambda
-#   ncov_b: number of covariates for b
+#   ncov_thin: number of covariates for thin_prob
 #   ncov_rho: number of covariates for rho
 #   po_pixel: pixel number of each presence-only datapoint
 #   pa_pixel: pixel number of each presence-absence datapoint
@@ -19,11 +19,11 @@
 # OUTPUTS:
 #   lambda[npixel]: estimated latent intensity
 #   z[npixel]: estimated latent occupancy 
-#   b[npixel]: estimated presence-only detection probabilities
+#   thin_prob[npixel]: estimated presence-only detection probabilities
 #   rho[nsite]: estimated presence-absence detection probabilities
 #   u[npixel]: estiamted spatial random effect on lambda
 #   beta_lam: log-linear predictors for lambda
-#   beta_b: logit-linear predictors for b
+#   beta_thin: logit-linear predictors for b
 #   beta_rho: logit-linear predictors for rho
 
 
@@ -39,11 +39,11 @@ model{
   
   ## PRESENCE-ONLY DATA MODEL ##
   for(t in 1:nyear){
-    po_denominator[t] <- inprod(lambda[1:npixel, t], b[1:npixel] ) / npo[t]
+    po_denominator[t] <- inprod(lambda[1:npixel, t], thin_prob[1:npixel] ) / npo[t]
     for(po in (po.idxs[t]+1):po.idxs[t+1]){
       ones[po] ~ dbern(
         exp(
-          log(lambda[po_pixel[po], t]*b[po_pixel[po]]) -
+          log(lambda[po_pixel[po], t]*thin_prob[po_pixel[po]]) -
             log(po_denominator[t])
         ) / cste
       )
@@ -59,7 +59,7 @@ model{
   
   ## LINEAR PREDICTORS
   for(pixel in 1:npixel){
-    logit(b[pixel]) <- inprod(x_b[pixel,], beta_b)
+    logit(thin_prob[pixel]) <- inprod(x_thin[pixel,], beta_thin)
     logit(rho[pixel]) <-inprod(x_rho[pixel, ], beta_rho)
   }
   
@@ -68,8 +68,8 @@ model{
   for(cov in 1:ncov_lam){
     beta_lam[cov] ~ dnorm(0, 0.01)
   }
-  for(cov in 1:ncov_b){
-    beta_b[cov] ~ dlogis(0, 1)
+  for(cov in 1:ncov_thin){
+    beta_thin[cov] ~ dlogis(0, 1)
   }
   for(cov in 1:ncov_rho){
     beta_rho[cov] ~ dlogis(0, 1)
@@ -80,6 +80,9 @@ model{
   for(t in 1:nyear){
     v[t] ~ dnorm(0,0.01)
   }
+  
+
+
 }
 
 

@@ -8,6 +8,7 @@ library(runjags)
 library(rjags)
 library(coda)
 library(mcmcplots)
+library(mgcv)
 
 rm(list = ls())
 
@@ -61,8 +62,6 @@ L93_grid$intercept <- 1
 
 ### Format data to run JAGS mod ### 
 
-nyear <- length(unique(pa.dat$year))
-
 pa.dat <- otterDat %>%
   st_drop_geometry() %>%
   filter(PNA.protocole) %>%
@@ -93,11 +92,24 @@ npo <- po.dat %>%
   .$n
 po.idxs <- c(0, cumsum(npo))
 
+nyear <- length(unique(pa.dat$year))
+
 ### Get Laplacian matrix of the L93 grid ### 
 
 cplx_crd <- complex(real = substr(L93_grid$grid.cell, 2,4),
                              imaginary = substr(L93_grid$grid.cell, 6,8))
 D.mat <- sapply(cplx_crd, FUN = function(x){as.numeric(abs(x-cplx_crd))})
+
+### Set up the GAM ###
+
+jags.file <- "JAGS/test.jags"
+
+tmpDat <- data.frame(1, st_coordinates(otterDat))
+names(tmpDat) <- c("y", "E", "N")
+  
+gamDat <- jagam(y ~ s(E,N, k = 10, bs = "ds", m = c(1,0.5)),
+                 data = tmpDat, file = jags.file, 
+                 family = "binomial")
 
 
 ### Fit JAGS mod ### 
@@ -106,33 +118,32 @@ data.list <- list(cell_area = L93_grid$logArea,
                   npixel = npixel,
                   nyear = nyear,
                   npo = npo,
+                  nspline = length(gamDat$jags.data$zero),
                   po.idxs = po.idxs,
                   pa.idxs = pa.idxs,
                   x_lam =  matrix(L93_grid$intercept, npixel, 1),
-                  x_b = matrix(L93_grid$intercept, npixel, 1),
+                  x_thin = matrix(L93_grid$intercept, npixel, 1),
                   x_rho =  matrix(L93_grid$intercept, npixel, 1),
+                  X_gam = gamDat$jags.data$X,
+                  S1 = gamDat$jags.data$S1,
                   ncov_lam = 1,
-                  ncov_b = 1,
+                  ncov_thin = 1,
                   ncov_rho = 1,
                   po_pixel = po.dat$pixel,
                   pa_pixel = pa.dat$pixel,
                   y = pa.dat$y,
                   K = pa.dat$K,
                   ones = po.dat$ones,
+                  zero = gamDat$jags.data$zero,
                   cste = 1000)
 
-z0 <- matrix(1, npixel, nyear)
+source("src/jags_ini.R")
 
-inits <- list(list(beta_rho = 0, beta_lam = -17.5, beta_b = 0, u = rep(0, npixel), v = rep(0, nyear), z = z0),
-              list(beta_rho = 0, beta_lam = -17.5, beta_b = 0, u = rep(0, npixel), v = rep(0, nyear), z = z0),
-              list(beta_rho = 0, beta_lam = -17.5, beta_b = 0, u = rep(0, npixel), v = rep(0, nyear), z = z0),
-              list(beta_rho = 0, beta_lam = -17.5, beta_b = 0, u = rep(0, npixel), v = rep(0, nyear), z = z0))
-
-mod <- run.jags(model = "src/intSDM_JAGSmod.R",
-                monitor = c("z", "lambda", "beta_lam", "beta_rho", "beta_b", "u", "v"),
+mod <- run.jags(model = "JAGS/intSDM_JAGSmod.R",
+                monitor = c("z", "lambda", "beta_lam", "beta_rho", "beta_thin", "u", "v"),
                 data = data.list,
                 n.chains = 4,
-                inits = inits,
+                inits = my_inits,
                 adapt = 500,
                 burnin = 1000,
                 sample = 1000,
@@ -141,7 +152,7 @@ mod <- run.jags(model = "src/intSDM_JAGSmod.R",
                 plots = TRUE,
                 method = "parallel")
 
-denplot(as.mcmc.list(mod), parms= c("beta_lam", "beta_rho", "beta_b"), collapse = FALSE)
+denplot(as.mcmc.list(mod), parms= c("beta_lam", "beta_rho", "beta_thin"), collapse = FALSE)
 
 mod.mat <- as.matrix(as.mcmc.list(mod), chains = T)
 
