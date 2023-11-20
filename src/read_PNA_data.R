@@ -257,6 +257,28 @@ dat <- dat %>%
 
 otter.dat <- rbind(otter.dat, dat)
 
+### 11. LPO Occitanie 
+
+dat.filename <- "data/PNA-data/Occitanie-LPOoccitanie/extraction SFEPM Loutre 1980-2022.xlsx"
+
+dat <- readxl::read_xlsx(dat.filename)
+names(dat) <- names(readxl::read_xlsx(dat.filename, n_max = 1))
+
+dat <- dat %>% 
+  mutate(PNA.protocole = FALSE,
+         date = as.Date(Date),
+         year = year(date),
+         presence = sign(Nombre),
+         region = "Occitanie",
+         data.provider = "LPO",
+         loc = `Lieu-dit`) %>%
+  rename(lon.l93 = `X Lambert93 [m]`,
+         lat.l93 = `Y Lambert93 [m]`,
+         grid.cell = Maille) %>%
+  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+
+otter.dat <- rbind(otter.dat, dat)
+
 # saveRDS(otter.dat, "data/otterDat.rds")
 # saveRDS(grid, "data/L9310x10grid.rds")
 # saveRDS(map_FR, "data/map_fr.rds")
