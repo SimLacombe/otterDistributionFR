@@ -106,8 +106,11 @@ jags.file <- "JAGS/test.jags"
 
 tmpDat <- data.frame(1, st_coordinates(otterDat))
 names(tmpDat) <- c("y", "E", "N")
+tmpDat <- tmpDat %>%
+  mutate(E = scale(E),
+         N = scale(N))
   
-gamDat <- jagam(y ~ s(E,N, k = 10, bs = "ds", m = c(1,0.5)),
+gamDat <- jagam(y ~ s(E,N, k = 10, bs = "ds"),
                  data = tmpDat, file = jags.file, 
                  family = "binomial")
 
@@ -124,7 +127,7 @@ data.list <- list(cell_area = L93_grid$logArea,
                   x_lam =  matrix(L93_grid$intercept, npixel, 1),
                   x_thin = matrix(L93_grid$intercept, npixel, 1),
                   x_rho =  matrix(L93_grid$intercept, npixel, 1),
-                  X_gam = gamDat$jags.data$X,
+                  x_gam = gamDat$jags.data$X,
                   S1 = gamDat$jags.data$S1,
                   ncov_lam = 1,
                   ncov_thin = 1,
@@ -139,8 +142,8 @@ data.list <- list(cell_area = L93_grid$logArea,
 
 source("src/jags_ini.R")
 
-mod <- run.jags(model = "JAGS/intSDM_JAGSmod.R",
-                monitor = c("z", "lambda", "beta_lam", "beta_rho", "beta_thin", "u", "v"),
+mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
+                monitor = c("z", "lambda", "beta_lam", "beta_rho", "beta_thin", "b"),
                 data = data.list,
                 n.chains = 4,
                 inits = my_inits,
@@ -152,20 +155,13 @@ mod <- run.jags(model = "JAGS/intSDM_JAGSmod.R",
                 plots = TRUE,
                 method = "parallel")
 
+
 denplot(as.mcmc.list(mod), parms= c("beta_lam", "beta_rho", "beta_thin"), collapse = FALSE)
 
 mod.mat <- as.matrix(as.mcmc.list(mod), chains = T)
 
 z.est <- apply(mod.mat[, grep("z\\[", colnames(mod.mat))], 2, mean)
-u.est <- apply(mod.mat[, grep("u\\[", colnames(mod.mat))], 2, mean)
-v.est <- apply(mod.mat[, grep("v\\[", colnames(mod.mat))], 2, mean)
-beta_lam.est <- mean(mod.mat[, "beta_lam"])
-
-lam.est <- exp(
-  matrix(rep(u.est, nyear), npixel, nyear) +   
-  matrix(rep(L93_grid$logArea, nyear), npixel, nyear) +   
-  matrix(rep(v.est, npixel), npixel, nyear, byrow = T) +
-  beta_lam.est)
+lam.est <- apply(mod.mat[, grep("lambda\\[", colnames(mod.mat))], 2, mean)
 
 lam.est.df <- data.frame(mean.lam = c(lam.est),
                          year = rep(unique(otterDat$year), each = npixel),
@@ -177,9 +173,9 @@ lam.est.df <- data.frame(mean.lam = c(lam.est),
 
 ggplot(map)+
   geom_sf()+
-  geom_sf(data = lam.est.df, aes(geometry = rep(L93_grid$geometry, nyear), fill = 1 - exp(-mean.lam)), alpha = 0.85) +
+  geom_sf(data = lam.est.df, aes(geometry = rep(L93_grid$geometry, nyear), fill = 1-exp(-mean.lam)), alpha = 0.85) +
   geom_sf(data = otterDat, aes(color = factor(presence), pch = PNA.protocole))+
-  geom_sf(data = riv_nw, aes(alpha = log(UP_CELLS)), color = "#002266", show.legend = FALSE)+
+  # geom_sf(data = riv_nw, aes(alpha = log(UP_CELLS)), color = "#002266", show.legend = FALSE)+
   scale_color_manual(values = c("red", "blue"))+
   scale_shape_manual(values = c(4,19))+
   scale_fill_gradient(low = "white", high = "springgreen4", name = "psi")+
