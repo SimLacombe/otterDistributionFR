@@ -57,5 +57,10 @@ ggplot(map)+
   scale_color_manual(values = c("orange", "chartreuse4"), name = "", labels = c("absent", "présent"))+
   scale_shape_manual(values = c(4,19), name = "", labels = c("opportuniste", "protocolé"))+
   facet_wrap(~year)+
-  theme_bw()
+  theme_bw()+
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        strip.background = element_blank(),
+        strip.text = element_text(face = "bold"))
 
