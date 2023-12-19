@@ -31,7 +31,7 @@ model{
   ## LATENT MODEL ## 
   for(t in 1:nyear){
     for(pixel in 1:npixel){
-      log(lambda[pixel, t]) <- inprod(x_lam[pixel,], beta_lam) + inprod(x_gam[pixel, ], b) + cell_area[pixel]
+      log(lambda[pixel, t]) <- inprod(x_lam[pixel,], beta_lam) + inprod(x_gam[pixel, ], b[, t]) + cell_area[pixel]
       z[pixel, t] ~ dbern(1 - exp(-lambda[pixel, t]))
     } 
   }
@@ -63,6 +63,16 @@ model{
     logit(rho[pixel]) <-inprod(x_rho[pixel, ], beta_rho)
   }
   
+  K1 <- S1[1:(nspline-1),1:(nspline-1)] * lambda_gam
+  
+  b[1, 1] ~ dnorm(0, 0.1)
+  b[2:nspline, 1] ~ dmnorm(zero[2:nspline],K1)
+  
+  for(jj in 1:nspline){
+    for(yr in 2:nyear){
+      b[jj,yr] ~ dnorm(b[jj,yr-1], tau_gam)
+    }
+  }
   
   ## PRIORS ##
   for(cov in 1:ncov_lam){
@@ -75,13 +85,9 @@ model{
     beta_rho[cov] ~ dlogis(0, 1)
   }
   
-  b[1, 1] ~ dnorm(0, 0.1)
-  
-  K1 <- S1[1:(nspline-1),1:(nspline-1)] * lambda_gam
-  b[2:nspline, 1] ~ dmnorm(zero[2:nspline],K1) 
 
   lambda_gam ~ dgamma(.05,.005)
-
+  tau_gam ~ dgamma(1,1)
 }
 
 

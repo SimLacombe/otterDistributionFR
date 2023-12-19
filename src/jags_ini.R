@@ -7,8 +7,12 @@ my_inits <- function(chain){
       beta_thin = rnorm(1, 0, 0.25),
       u = rnorm(data.list$npixel, 0, 0.25),
       v = rnorm(data.list$nyear, 0, 0.25),
-      b = matrix(rnorm(data.list$nspline, gamDat$jags.ini$b, 0.1), nrow = data.list$nspline),
+      b = matrix(
+        rnorm(data.list$nspline * data.list$nyear, rep(gamDat$jags.ini$b,each = data.list$nyear),0.1),
+        nrow = data.list$nspline,
+        ncol = data.list$nyear),
       lambda_gam = gamDat$jags.ini$lambda,
+      tau_gam = rgamma(1,1,1),
       .RNG.name = switch(chain,
                          "1" = "base::Wichmann-Hill",
                          "2" = "base::Wichmann-Hill",
