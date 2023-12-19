@@ -8,7 +8,7 @@ my_inits <- function(chain){
       u = rnorm(data.list$npixel, 0, 0.25),
       v = rnorm(data.list$nyear, 0, 0.25),
       b = matrix(rnorm(data.list$nspline, gamDat$jags.ini$b, 0.1), nrow = data.list$nspline),
-      lambda_gam = rgamma(1, 1, 1),
+      lambda_gam = gamDat$jags.ini$lambda,
       .RNG.name = switch(chain,
                          "1" = "base::Wichmann-Hill",
                          "2" = "base::Wichmann-Hill",

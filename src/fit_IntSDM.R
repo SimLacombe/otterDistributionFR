@@ -104,13 +104,10 @@ D.mat <- sapply(cplx_crd, FUN = function(x){as.numeric(abs(x-cplx_crd))})
 
 jags.file <- "JAGS/test.jags"
 
-tmpDat <- data.frame(1, st_coordinates(otterDat))
+tmpDat <- data.frame(1, st_coordinates(otterDat %>% st_transform(crs = 4326)))
 names(tmpDat) <- c("y", "E", "N")
-tmpDat <- tmpDat %>%
-  mutate(E = scale(E),
-         N = scale(N))
   
-gamDat <- jagam(y ~ s(E,N, k = 10, bs = "ds"),
+gamDat <- jagam(y ~ s(E,N, k = 10, bs = "ds", m = c(1,0.5)),
                  data = tmpDat, file = jags.file, 
                  family = "binomial")
 
@@ -143,7 +140,7 @@ data.list <- list(cell_area = L93_grid$logArea,
 source("src/jags_ini.R")
 
 mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
-                monitor = c("z", "lambda", "beta_lam", "beta_rho", "beta_thin", "b"),
+                monitor = c("z", "lambda", "beta_lam", "beta_rho", "beta_thin", "b", "lambda_gam"),
                 data = data.list,
                 n.chains = 4,
                 inits = my_inits,
@@ -156,7 +153,7 @@ mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
                 method = "parallel")
 
 
-denplot(as.mcmc.list(mod), parms= c("beta_lam", "beta_rho", "beta_thin"), collapse = FALSE)
+denplot(as.mcmc.list(mod), parms= c("beta_lam", "beta_rho", "beta_thin", "lambda_gam"), collapse = FALSE)
 
 mod.mat <- as.matrix(as.mcmc.list(mod), chains = T)
 

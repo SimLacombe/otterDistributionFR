@@ -77,7 +77,7 @@ model{
   
   b[1, 1] ~ dnorm(0, 0.1)
   
-  K1 <- S1[1:(nspline-1),1:(nspline-1)]
+  K1 <- S1[1:(nspline-1),1:(nspline-1)] * lambda_gam
   b[2:nspline, 1] ~ dmnorm(zero[2:nspline],K1) 
 
   lambda_gam ~ dgamma(.05,.005)
