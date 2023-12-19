@@ -104,7 +104,7 @@ D.mat <- sapply(cplx_crd, FUN = function(x){as.numeric(abs(x-cplx_crd))})
 
 jags.file <- "JAGS/test.jags"
 
-tmpDat <- data.frame(1, st_coordinates(otterDat %>% st_transform(crs = 4326)))
+tmpDat <- data.frame(1, st_coordinates(st_centroid(st_transform(L93_grid, crs = 4326))))
 names(tmpDat) <- c("y", "E", "N")
   
 gamDat <- jagam(y ~ s(E,N, k = 10, bs = "ds", m = c(1,0.5)),
