@@ -31,25 +31,42 @@ otter.dat <- data.frame()
 
 ### 1. GMB BRETAGNE ###
 
-dat.filename <- "data/PNA-DATA/Bretagne-GMB/Data_Lutra_GMB.xlsx"
-dat <- readxl::read_xlsx(dat.filename) %>%
-  mutate(PNA.protocole = jdd_nom %in%c("DonnÃ©es publiques de l'Inventaire MammifÃ¨res semi-aquatiques de l'Atlas 2010-14",
-                       "DonnÃ©es privÃ©es de l'Inventaire MammifÃ¨res semi-aquatiques de l'Atlas 2010-14",
-                       "DonnÃ©es publiques prospections Loutre standardisÃ©es 2000-",
-                       "DonnÃ©es privÃ©es prospections Loutre standardisÃ©es 2000-",
-                       "DonnÃ©es Ã©tudes Loutre GMB")) %>% 
-  mutate(date = as.Date(date_debut),
-         year = year(date_debut),
-         presence = as.numeric(statut_obs == "PrÃ©sent"),
-         region = "Bretagne", 
-         data.provider = "GMB") %>%
-  rename(grid.cell = CODE10KM,
-         loc = communes)%>%
-  filter(PNA.protocole|as.logical(presence))
+dat.filename <- "data/PNA-DATA/Bretagne-GMB/Data_Lutra_GMB.csv"
+dat <- read.csv(dat.filename, sep = ";") 
 
 dat <- dat %>%
-  left_join(grid[,c("lon.l93", "lat.l93", "grid.cell"), by = "grid.cell"]) %>%
-  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  mutate(PNA.protocole = jdd_nom %in% c("Données publiques de l'Inventaire Mammifères semi-aquatiques de l'Atlas 2010-14",
+                       "Données privées de l'Inventaire Mammifères semi-aquatiques de l'Atlas 2010-14",
+                       "Données publiques prospections Loutre standardisées 2000-",
+                       "Données privées prospections Loutre standardisées 2000-",
+                       "Données études Loutre GMB"),
+         opportuniste = grepl("Données opportunistes", jdd_nom) | grepl("Données faunebretagne", jdd_nom)) %>% 
+  filter(PNA.protocole | opportuniste)
+
+
+dat <- dat %>% 
+  mutate(date = as.Date(date_debut, format = "%d/%m/%y"),
+         year = year(date_debut),
+         presence = as.numeric(statut_observation  == "Présent"),
+         region = "Bretagne", 
+         data.provider = "GMB") %>%
+  rename(loc = communes)%>%
+  filter(PNA.protocole|as.logical(presence))
+
+  
+dat[, c("lon.l93", "lat.l93")] <- dat %>%
+  st_as_sf(coords = c("x_centroid_4326", "y_centroid_4326"), crs = 4326) %>%
+  st_transform(crs = 2154) %>%
+  st_coordinates()
+
+
+dat <- dat %>%
+  mutate(grid.cell = ifelse(lon.l93 >= 1000000,
+                            paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
+                            paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))
+
+dat <- dat %>%
+  select(data.provider, region,PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 otter.dat <- rbind(otter.dat, dat)
 
@@ -280,82 +297,82 @@ dat <- dat %>%
 
 otter.dat <- rbind(otter.dat, dat)
 
-# saveRDS(otter.dat, "data/otterDat.rds")
+saveRDS(otter.dat, "data/otterDat.rds")
 # saveRDS(grid, "data/L9310x10grid.rds")
 # saveRDS(map_FR, "data/map_fr.rds")
 
 ### Some plots -----------------------------------------------------------------
-
-otter.dat.sf <- st_as_sf(otter.dat, coords = c("lon.l93", "lat.l93"), crs = 2154)
-
-ggplot(otter.dat.sf)+
-  geom_sf(data=map_FR)+
-  geom_sf(aes(col = as.factor(presence)))
-
-otter.dat %>%
-  mutate(PNA.protocole = ifelse(PNA.protocole, "Standard protocole", "All data")) %>%
-  group_by(region, year, PNA.protocole) %>%
-  summarize(n.grid = length(unique(grid.cell))) %>%
-  ggplot()+
-  geom_line(aes(x=year, y = n.grid, col = region), linewidth = 1)+
-  theme_bw()+
-  theme(legend.position = "bottom")+
-  facet_wrap(~PNA.protocole, nrow = 2)+
-  ggtitle("Number of grid cells visited")
-
-otter.dat %>%
-  mutate(PNA.protocole = ifelse(PNA.protocole, "Standard protocole", "All data")) %>%
-  group_by(region, year, grid.cell,PNA.protocole) %>%
-  summarize(n.visit = n()) %>%
-  group_by(region, year,PNA.protocole) %>%
-  summarize(n.visit = mean(n.visit)) %>%
-  ggplot()+
-  geom_line(aes(x = year, y = n.visit, color = region), linewidth = 1)+
-  geom_hline(aes(yintercept = 4), linetype = "dashed")+
-  theme_bw()+
-  theme(legend.position = "bottom")+
-  facet_wrap(~PNA.protocole, nrow = 2)+
-  ggtitle("Average number of visits per grid cell")
-
-nyr <- 5
-otter.gridded <- otter.dat %>%
-  filter(year >= 2009) %>%
-  mutate(period = (year+1) %/% nyr,
-         period = paste0(period * nyr - 1, " - ", period * nyr + nyr - 2)) %>%
-  group_by(data.provider, region, period, grid.cell) %>%
-  summarize(dens = min(50,sum(presence)),
-            presence = sign(sum(presence)),
-            nsample = n()) %>%
-  left_join(grid[,c("geometry", "grid.cell")], by = "grid.cell") %>%
-  st_as_sf
-
-ggplot(otter.gridded)+
-  geom_sf(data=map_FR)+
-  geom_sf(aes(fill = factor(presence, labels = c("unobserved", "present"))))+
-  facet_wrap(~period)+
-  scale_fill_manual(name = "", values = c("darkblue", "lightblue"))+
-  theme_bw()+
-  theme(legend.position = "bottom")
-
-ggplot(otter.gridded)+
-  geom_sf(data=map_FR)+
-  geom_sf(aes(fill = dens, color = dens))+
-  scale_fill_viridis_c() +
-  scale_color_viridis_c() +
-  facet_wrap(~period)+
-  theme_bw()+
-  theme(legend.position = "bottom")
-
-otter.gridded%>%
-  group_by(grid.cell)%>%
-  arrange(grid.cell, period) %>%
-  mutate(delta.occ = 2 * presence * lag(presence,1) + presence - lag(presence, 1),
-         new.obs = is.na(delta.occ),
-         delta.occ = ifelse(is.na(delta.occ), 2*presence, delta.occ)) %>%
-  ggplot()+
-  geom_sf(data=map_FR)+
-  geom_sf(aes(fill = factor(delta.occ, labels = c("ext","absent"," col", "present"))))+
-  scale_fill_manual(name = "", values = c("red", "orange", "darkgreen", "lightgreen"))+
-  facet_wrap(~period)+
-  theme_bw()+
-  theme(legend.position = "bottom")
+# 
+# otter.dat.sf <- st_as_sf(otter.dat, coords = c("lon.l93", "lat.l93"), crs = 2154)
+# 
+# ggplot(otter.dat.sf)+
+#   geom_sf(data=map_FR)+
+#   geom_sf(aes(col = as.factor(presence)))
+# 
+# otter.dat %>%
+#   mutate(PNA.protocole = ifelse(PNA.protocole, "Standard protocole", "All data")) %>%
+#   group_by(region, year, PNA.protocole) %>%
+#   summarize(n.grid = length(unique(grid.cell))) %>%
+#   ggplot()+
+#   geom_line(aes(x=year, y = n.grid, col = region), linewidth = 1)+
+#   theme_bw()+
+#   theme(legend.position = "bottom")+
+#   facet_wrap(~PNA.protocole, nrow = 2)+
+#   ggtitle("Number of grid cells visited")
+# 
+# otter.dat %>%
+#   mutate(PNA.protocole = ifelse(PNA.protocole, "Standard protocole", "All data")) %>%
+#   group_by(region, year, grid.cell,PNA.protocole) %>%
+#   summarize(n.visit = n()) %>%
+#   group_by(region, year,PNA.protocole) %>%
+#   summarize(n.visit = mean(n.visit)) %>%
+#   ggplot()+
+#   geom_line(aes(x = year, y = n.visit, color = region), linewidth = 1)+
+#   geom_hline(aes(yintercept = 4), linetype = "dashed")+
+#   theme_bw()+
+#   theme(legend.position = "bottom")+
+#   facet_wrap(~PNA.protocole, nrow = 2)+
+#   ggtitle("Average number of visits per grid cell")
+# 
+# nyr <- 5
+# otter.gridded <- otter.dat %>%
+#   filter(year >= 2009) %>%
+#   mutate(period = (year+1) %/% nyr,
+#          period = paste0(period * nyr - 1, " - ", period * nyr + nyr - 2)) %>%
+#   group_by(data.provider, region, period, grid.cell) %>%
+#   summarize(dens = min(50,sum(presence)),
+#             presence = sign(sum(presence)),
+#             nsample = n()) %>%
+#   left_join(grid[,c("geometry", "grid.cell")], by = "grid.cell") %>%
+#   st_as_sf
+# 
+# ggplot(otter.gridded)+
+#   geom_sf(data=map_FR)+
+#   geom_sf(aes(fill = factor(presence, labels = c("unobserved", "present"))))+
+#   facet_wrap(~period)+
+#   scale_fill_manual(name = "", values = c("darkblue", "lightblue"))+
+#   theme_bw()+
+#   theme(legend.position = "bottom")
+# 
+# ggplot(otter.gridded)+
+#   geom_sf(data=map_FR)+
+#   geom_sf(aes(fill = dens, color = dens))+
+#   scale_fill_viridis_c() +
+#   scale_color_viridis_c() +
+#   facet_wrap(~period)+
+#   theme_bw()+
+#   theme(legend.position = "bottom")
+# 
+# otter.gridded%>%
+#   group_by(grid.cell)%>%
+#   arrange(grid.cell, period) %>%
+#   mutate(delta.occ = 2 * presence * lag(presence,1) + presence - lag(presence, 1),
+#          new.obs = is.na(delta.occ),
+#          delta.occ = ifelse(is.na(delta.occ), 2*presence, delta.occ)) %>%
+#   ggplot()+
+#   geom_sf(data=map_FR)+
+#   geom_sf(aes(fill = factor(delta.occ, labels = c("ext","absent"," col", "present"))))+
+#   scale_fill_manual(name = "", values = c("red", "orange", "darkgreen", "lightgreen"))+
+#   facet_wrap(~period)+
+#   theme_bw()+
+#   theme(legend.position = "bottom")

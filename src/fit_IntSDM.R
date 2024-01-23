@@ -159,8 +159,13 @@ mod.mat <- as.matrix(as.mcmc.list(mod), chains = T)
 
 z.est <- apply(mod.mat[, grep("z\\[", colnames(mod.mat))], 2, mean)
 lam.est <- apply(mod.mat[, grep("lambda\\[", colnames(mod.mat))], 2, mean)
+lam.sd <- apply(mod.mat[, grep("lambda\\[", colnames(mod.mat))], 2, sd)
 
 lam.est.df <- data.frame(mean.lam = c(lam.est),
+                         year = rep(unique(otterDat$year), each = npixel),
+                         px = rep(1:npixel, nyear))
+
+lam.sd.df <- data.frame(lam.sd = c(lam.sd),
                          year = rep(unique(otterDat$year), each = npixel),
                          px = rep(1:npixel, nyear))
 
