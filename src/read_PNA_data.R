@@ -44,7 +44,8 @@ dat <- readxl::read_xlsx(dat.filename) %>%
          region = "Bretagne", 
          data.provider = "GMB") %>%
   rename(grid.cell = CODE10KM,
-         loc = communes)
+         loc = communes)%>%
+  filter(PNA.protocole|as.logical(presence))
 
 dat <- dat %>%
   left_join(grid[,c("lon.l93", "lat.l93", "grid.cell"), by = "grid.cell"]) %>%
