@@ -45,8 +45,8 @@ dat <- dat %>%
 
 
 dat <- dat %>% 
-  mutate(date = as.Date(date_debut, format = "%d/%m/%y"),
-         year = year(date_debut),
+  mutate(date = as.Date(date_debut, format = "%d/%m/%Y"),
+         year = year(date),
          presence = as.numeric(statut_observation  == "Présent"),
          region = "Bretagne", 
          data.provider = "GMB") %>%
