@@ -62,8 +62,9 @@ npixel <- nrow(L93_grid)
 L93_grid$intercept <- 1
 
 ### Format data to run JAGS mod ### 
+tmp.res <- 4
 
-otterDat$period = otterDat$year %/% 4
+otterDat$period = otterDat$year %/% tmp.res
 
 pa.dat <- otterDat %>%
   st_drop_geometry() %>%
@@ -188,7 +189,7 @@ ggplot(map)+
   # geom_sf(data = riv_nw, aes(alpha = log(UP_CELLS)), color = "#002266", show.legend = FALSE)+
   scale_color_manual(values = c("red", "blue", "black"))+
   scale_fill_gradient(low = "white", high = "springgreen4", name = "psi")+
-  facet_wrap(~paste0(period*4, " - ", period*4+3))+
+  facet_wrap(~paste0(period*tmp.res, " - ", period*tmp.res+tmp.res-1))+
   theme_bw()
 
 
