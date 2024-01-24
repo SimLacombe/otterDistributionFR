@@ -223,8 +223,6 @@ dat <- dat %>%
   select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 otter.dat <- rbind(otter.dat, dat)
-otter.dat <- otter.dat %>%
-  filter(year >= 2000)
 
 ### 9. LPO Bourgogne Franche-Comté
 
@@ -239,8 +237,7 @@ dat <- dat %>%
          region = "Bourgogne.Franche.Comté",
          data.provider = "LPO",
          grid.cell = Maille,
-         year = year(date))%>%
-  filter(year >= 2000)
+         year = year(date))
 
 dat <- dat %>%
   left_join(grid[,c("lon.l93", "lat.l93", "grid.cell"), by = "grid.cell"]) %>%

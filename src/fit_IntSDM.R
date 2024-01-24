@@ -24,7 +24,7 @@ otterDat <- readRDS(data.filename) %>%
 ### Keep only PACA ###
 
 otterDat <- otterDat %>% 
-  filter(region %in% c("Bretagne", "Vendée", "Anjou"), year < 2024)
+  filter(region %in% c("Bretagne", "Anjou", "Vendée"), year %in% 2000:2023)
 
 ### Get individual transects ### 
 
@@ -62,7 +62,7 @@ npixel <- nrow(L93_grid)
 L93_grid$intercept <- 1
 
 ### Format data to run JAGS mod ### 
-tmp.res <- 4
+tmp.res <- 4 #years
 
 otterDat$period = otterDat$year %/% tmp.res
 
