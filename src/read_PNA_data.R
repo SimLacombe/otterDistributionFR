@@ -142,7 +142,7 @@ dat <- readxl::read_xlsx(dat.filename)
 
 dat <- dat %>% 
   mutate(Remarques = toupper(Remarques))%>%
-  mutate(PNA.protocole = grepl("PNA", Remarques))%>%
+  mutate(PNA.protocole = grepl("PNA", Remarques)|grepl("PRA", Remarques)|grepl("UICN", Remarques)|grepl("POINT", Remarques))%>%
   mutate(date = as.Date(Date),
          year = year(date),
          presence = sign(Nombre),

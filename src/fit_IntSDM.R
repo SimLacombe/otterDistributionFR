@@ -24,7 +24,7 @@ otterDat <- readRDS(data.filename) %>%
 ### Keep only PACA ###
 
 otterDat <- otterDat %>% 
-  filter(region == "Bretagne")
+  filter(region %in% c("Bretagne", "Vendée", "Anjou"), year < 2024)
 
 ### Get individual transects ### 
 
@@ -63,17 +63,19 @@ L93_grid$intercept <- 1
 
 ### Format data to run JAGS mod ### 
 
+otterDat$period = otterDat$year %/% 4
+
 pa.dat <- otterDat %>%
   st_drop_geometry() %>%
   filter(PNA.protocole) %>%
-  group_by(year, grid.cell) %>%
+  group_by(period, grid.cell) %>%
   summarize(K = n(),
             y = sum(presence))
 
 pa.dat$pixel <- sapply(pa.dat$grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
 
 npa <- pa.dat %>%
-  group_by(year) %>%
+  group_by(period) %>%
   summarize(n = n()) %>% 
   .$n
 pa.idxs <- c(0, cumsum(npa))
@@ -81,25 +83,25 @@ pa.idxs <- c(0, cumsum(npa))
 po.dat <- otterDat %>%
   st_drop_geometry() %>%
   filter(!PNA.protocole, as.logical(presence)) %>%
-  group_by(year, grid.cell) %>%
+  group_by(period, grid.cell) %>%
   summarize()
 
 po.dat$pixel <- sapply(po.dat$grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
 po.dat$ones <- 1
 
 npo <- po.dat %>%
-  group_by(year) %>%
+  group_by(period) %>%
   summarize(n = n()) %>% 
   .$n
 po.idxs <- c(0, cumsum(npo))
 
-nyear <- length(unique(pa.dat$year))
+nperiod <- length(unique(pa.dat$period))
 
 ### Get Laplacian matrix of the L93 grid ### 
 
-cplx_crd <- complex(real = substr(L93_grid$grid.cell, 2,4),
-                             imaginary = substr(L93_grid$grid.cell, 6,8))
-D.mat <- sapply(cplx_crd, FUN = function(x){as.numeric(abs(x-cplx_crd))})
+# cplx_crd <- complex(real = substr(L93_grid$grid.cell, 2,4),
+#                              imaginary = substr(L93_grid$grid.cell, 6,8))
+# D.mat <- sapply(cplx_crd, FUN = function(x){as.numeric(abs(x-cplx_crd))})
 
 ### Set up the GAM ###
 
@@ -117,7 +119,7 @@ gamDat <- jagam(y ~ s(E,N, k = 10, bs = "ds", m = c(1,0.5)),
 
 data.list <- list(cell_area = L93_grid$logArea,
                   npixel = npixel,
-                  nyear = nyear,
+                  nyear = nperiod,
                   npo = npo,
                   nspline = length(gamDat$jags.data$zero),
                   po.idxs = po.idxs,
@@ -163,26 +165,30 @@ lam.est <- apply(mod.mat[, grep("lambda\\[", colnames(mod.mat))], 2, mean)
 lam.sd <- apply(mod.mat[, grep("lambda\\[", colnames(mod.mat))], 2, sd)
 
 lam.est.df <- data.frame(mean.lam = c(lam.est),
-                         year = rep(unique(otterDat$year), each = npixel),
-                         px = rep(1:npixel, nyear))
+                         period = rep(unique(otterDat$period), each = npixel),
+                         px = rep(1:npixel, nperiod))
 
 lam.sd.df <- data.frame(lam.sd = c(lam.sd),
-                         year = rep(unique(otterDat$year), each = npixel),
-                         px = rep(1:npixel, nyear))
+                         period = rep(unique(otterDat$period), each = npixel),
+                         px = rep(1:npixel, nperiod))
 
 # riv_nw <- read_sf("data/eu_riv_30s/") %>%
 #   st_transform(crs = 2154) %>%
 #   st_intersection(map)
 
+otterDat <- otterDat%>%
+  filter(PNA.protocole|as.logical(presence)) %>% 
+  mutate(dataType = ifelse(PNA.protocole&as.logical(presence), "PNA presence",
+                           ifelse(PNA.protocole, "PNA absence", "presence Opportuniste")))
+
 ggplot(map)+
   geom_sf()+
-  geom_sf(data = lam.est.df, aes(geometry = rep(L93_grid$geometry, nyear), fill = 1-exp(-mean.lam)), alpha = 0.85) +
-  geom_sf(data = otterDat, aes(color = factor(presence), pch = PNA.protocole))+
+  geom_sf(data = lam.est.df, aes(geometry = rep(L93_grid$geometry, nperiod), fill = 1-exp(-mean.lam)), alpha = 0.85) +
+  geom_sf(data = otterDat, aes(color = dataType), alpha = 0.5, size = .6)+
   # geom_sf(data = riv_nw, aes(alpha = log(UP_CELLS)), color = "#002266", show.legend = FALSE)+
-  scale_color_manual(values = c("red", "blue"))+
-  scale_shape_manual(values = c(4,19))+
+  scale_color_manual(values = c("red", "blue", "black"))+
   scale_fill_gradient(low = "white", high = "springgreen4", name = "psi")+
-  facet_wrap(~year)+
+  facet_wrap(~paste0(period*4, " - ", period*4+3))+
   theme_bw()
 
 
