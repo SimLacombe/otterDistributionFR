@@ -117,10 +117,20 @@ dat <- readxl::read_xlsx(dat.filename, skip = 1)
 names(dat) <- names(readxl::read_xlsx(dat.filename, n_max = 1))
 
 dat <- dat %>% 
-  mutate(COMMENT = toupper(COMMENT))%>%
-  mutate(PNA.protocole = (grepl("E\\d\\d\\dN\\d\\d\\d", COMMENT)|grepl("E\\d\\dN\\d\\d\\d", COMMENT)|
-                          grepl("EO\\d\\dN\\d\\d\\d", COMMENT)|grepl("EN\\d\\d\\dN\\d\\d\\d", PRIVATE_COMMENT)|
-                          grepl("E\\d\\d\\dN\\d\\d\\d", PRIVATE_COMMENT)|grepl("PNA", COMMENT))&!grepl("HORS", COMMENT))%>%
+  mutate(COMMENT = toupper(COMMENT),
+         tr_len = as.numeric(gsub("\\D", "", str_extract(COMMENT, "\\d\\d\\d\\dM"))),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(COMMENT, "\\d\\d\\d\\d M"))), tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(COMMENT, "\\d\\d\\d M"))), tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(COMMENT, "\\d\\d\\dM"))), tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(COMMENT, "\\d.\\dKM")))*100, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(COMMENT, "\\dKM")))*1000, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(COMMENT, "\\d.\\d KM")))*100, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(COMMENT, "\\d KM")))*1000, tr_len))%>%
+  mutate(PNA.protocole = grepl("E\\d\\d\\dN\\d\\d\\d", COMMENT)|grepl("E\\d\\dN\\d\\d\\d", COMMENT)|
+           grepl("EO\\d\\dN\\d\\d\\d", COMMENT)|grepl("EN\\d\\d\\dN\\d\\d\\d", PRIVATE_COMMENT)|
+           grepl("E\\d\\d\\dN\\d\\d\\d", PRIVATE_COMMENT)|grepl("PNA", COMMENT),
+         PNA.protocole = PNA.protocole|tr_len >= 300,
+         PNA.protocole = ifelse(is.na(PNA.protocole), FALSE, PNA.protocole)) %>%
   mutate(date = as.Date(DATE),
          year = year(date),
          presence = sign(TOTAL_COUNT),
@@ -141,8 +151,18 @@ dat.filename <- "data/PNA-data/PaysdelaLoire-LPOanjou/Copie de Export_données_
 dat <- readxl::read_xlsx(dat.filename)
 
 dat <- dat %>% 
-  mutate(Remarques = toupper(Remarques))%>%
-  mutate(PNA.protocole = grepl("PNA", Remarques)|grepl("PRA", Remarques)|grepl("UICN", Remarques)|grepl("POINT", Remarques))%>%
+  mutate(Remarques = toupper(Remarques),
+         tr_len = as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\d\\dM"))),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\d\\d M"))), tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\d M"))), tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\dM"))), tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\dKM")))*100, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\dKM")))*10000, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d KM")))*1000, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d KM")))*1000, tr_len))%>%
+  mutate(PNA.protocole = grepl("PNA", Remarques)|grepl("PRA", Remarques)|grepl("UICN", Remarques)|grepl("POINT", Remarques),
+         PNA.protocole = PNA.protocole|tr_len >= 300,
+         PNA.protocole = ifelse(is.na(PNA.protocole), FALSE, PNA.protocole))%>%
   mutate(date = as.Date(Date),
          year = year(date),
          presence = sign(Nombre),
@@ -165,7 +185,7 @@ names(dat) <- names(readxl::read_xlsx(dat.filename, n_max = 1))
 
 dat <- dat %>% 
   mutate(COMMENT = toupper(COMMENT))%>%
-  mutate(PNA.protocole = FALSE, 
+  mutate(PNA.protocole = NAME == "Marais Breton"|TRA_NAME == "Marais Breton", 
          date = as.Date(DATE),
          year = year(date),
          presence = sign(TOTAL_COUNT),
@@ -245,10 +265,10 @@ dat <- dat %>%
   
 otter.dat <- rbind(otter.dat, dat)
   
-### 10. SHNA Bourgogne Franche-Comté 
+### 10. SHNA Bourgogne FrancheComté
 
-dat1.filename <- "data/PNA-data/CentreValdeLoire-SHNA/données_loutre_SHNA_brut.csv"
-dat2.filename <- "data/PNA-data/CentreValdeLoire-SHNA/BBF20231005_Loutre_etudeCNRS_SFEPM_2021_2023.csv"
+dat1.filename <- "data/PNA-data/BourgogneFrancheComté-SHNA/données_loutre_SHNA_brut.csv"
+dat2.filename <- "data/PNA-data/BourgogneFrancheComté-SHNA/BBF20231005_Loutre_etudeCNRS_SFEPM_2021_2023.csv"
 
 dat1 <- read.csv(dat1.filename, sep = ";") %>%
   filter(LAMBERT_93 != "") %>%
@@ -257,6 +277,7 @@ dat1 <- read.csv(dat1.filename, sep = ";") %>%
 dat2 <- read.csv(dat2.filename, sep = ";")
 
 dat <- rbind(dat1[, names(dat1) %in% names(dat2)], dat2[, names(dat2) %in% names(dat1)]) %>% 
+  filter(DATE_OBS != "") %>%
   mutate(PNA.protocole = PROTOCOLE == "SFEPM-Loutre", 
          date = as.Date(DATE_OBS),
          loc = COMMUNE,
@@ -264,8 +285,8 @@ dat <- rbind(dat1[, names(dat1) %in% names(dat2)], dat2[, names(dat2) %in% names
          region = "Bourgogne.Franche.Comté",
          data.provider = "SHNA",
          grid.cell = LAMBERT_93,
-         year = year(date))%>%
-  filter(year >= 2000)
+         year = year(date))
+
 dat <- dat %>%
   left_join(grid[,c("lon.l93", "lat.l93", "grid.cell"), by = "grid.cell"]) %>%
   select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
@@ -294,82 +315,42 @@ dat <- dat %>%
 
 otter.dat <- rbind(otter.dat, dat)
 
-saveRDS(otter.dat, "data/otterDat.rds")
+# saveRDS(otter.dat, "data/otterDat.rds")
 # saveRDS(grid, "data/L9310x10grid.rds")
 # saveRDS(map_FR, "data/map_fr.rds")
 
 ### Some plots -----------------------------------------------------------------
-# 
-# otter.dat.sf <- st_as_sf(otter.dat, coords = c("lon.l93", "lat.l93"), crs = 2154)
-# 
-# ggplot(otter.dat.sf)+
-#   geom_sf(data=map_FR)+
-#   geom_sf(aes(col = as.factor(presence)))
-# 
+
+otter.dat %>%
+  filter(year %in% 2009:2023) %>%
+  group_by(grid.cell) %>%
+  summarize(cell.status = ifelse(any(PNA.protocole)&any(presence>0), "Présente - protocolé",
+                                 ifelse(any(presence > 0),"Présente - opportuniste", 
+                                        "Non observée")),
+            nsample = n()) %>%
+  left_join(grid[,c("geometry", "grid.cell")], by = "grid.cell") %>%
+  st_as_sf %>%
+  ggplot()+
+    geom_sf(data=map_FR)+
+    geom_sf(aes(fill = cell.status))+
+    scale_fill_manual(name = "", values = c("orange", "lightblue", "darkblue"))+
+    theme_bw()+
+    theme(legend.position = "bottom")
+
 # otter.dat %>%
-#   mutate(PNA.protocole = ifelse(PNA.protocole, "Standard protocole", "All data")) %>%
-#   group_by(region, year, PNA.protocole) %>%
-#   summarize(n.grid = length(unique(grid.cell))) %>%
-#   ggplot()+
-#   geom_line(aes(x=year, y = n.grid, col = region), linewidth = 1)+
-#   theme_bw()+
-#   theme(legend.position = "bottom")+
-#   facet_wrap(~PNA.protocole, nrow = 2)+
-#   ggtitle("Number of grid cells visited")
-# 
-# otter.dat %>%
-#   mutate(PNA.protocole = ifelse(PNA.protocole, "Standard protocole", "All data")) %>%
-#   group_by(region, year, grid.cell,PNA.protocole) %>%
-#   summarize(n.visit = n()) %>%
-#   group_by(region, year,PNA.protocole) %>%
-#   summarize(n.visit = mean(n.visit)) %>%
-#   ggplot()+
-#   geom_line(aes(x = year, y = n.visit, color = region), linewidth = 1)+
-#   geom_hline(aes(yintercept = 4), linetype = "dashed")+
-#   theme_bw()+
-#   theme(legend.position = "bottom")+
-#   facet_wrap(~PNA.protocole, nrow = 2)+
-#   ggtitle("Average number of visits per grid cell")
-# 
-# nyr <- 5
-# otter.gridded <- otter.dat %>%
-#   filter(year >= 2009) %>%
-#   mutate(period = (year+1) %/% nyr,
-#          period = paste0(period * nyr - 1, " - ", period * nyr + nyr - 2)) %>%
-#   group_by(data.provider, region, period, grid.cell) %>%
-#   summarize(dens = min(50,sum(presence)),
-#             presence = sign(sum(presence)),
+#   filter(year %in% 2008:2023) %>%
+#   mutate(period = year %/% 4) %>%
+#   group_by(period, grid.cell) %>%
+#   summarize(cell.status = ifelse(any(PNA.protocole)&any(presence>0), "Présente - protocolé",
+#                                  ifelse(any(presence > 0),"Présente - opportuniste", 
+#                                         "Non observée")),
 #             nsample = n()) %>%
 #   left_join(grid[,c("geometry", "grid.cell")], by = "grid.cell") %>%
-#   st_as_sf
-# 
-# ggplot(otter.gridded)+
-#   geom_sf(data=map_FR)+
-#   geom_sf(aes(fill = factor(presence, labels = c("unobserved", "present"))))+
-#   facet_wrap(~period)+
-#   scale_fill_manual(name = "", values = c("darkblue", "lightblue"))+
-#   theme_bw()+
-#   theme(legend.position = "bottom")
-# 
-# ggplot(otter.gridded)+
-#   geom_sf(data=map_FR)+
-#   geom_sf(aes(fill = dens, color = dens))+
-#   scale_fill_viridis_c() +
-#   scale_color_viridis_c() +
-#   facet_wrap(~period)+
-#   theme_bw()+
-#   theme(legend.position = "bottom")
-# 
-# otter.gridded%>%
-#   group_by(grid.cell)%>%
-#   arrange(grid.cell, period) %>%
-#   mutate(delta.occ = 2 * presence * lag(presence,1) + presence - lag(presence, 1),
-#          new.obs = is.na(delta.occ),
-#          delta.occ = ifelse(is.na(delta.occ), 2*presence, delta.occ)) %>%
+#   st_as_sf %>%
 #   ggplot()+
 #   geom_sf(data=map_FR)+
-#   geom_sf(aes(fill = factor(delta.occ, labels = c("ext","absent"," col", "present"))))+
-#   scale_fill_manual(name = "", values = c("red", "orange", "darkgreen", "lightgreen"))+
-#   facet_wrap(~period)+
+#   geom_sf(aes(fill = cell.status))+
+#   scale_fill_manual(name = "", values = c("orange", "lightblue", "darkblue"))+
 #   theme_bw()+
+#   facet_wrap(~paste0(period * 4, " - ", period * 4 + 3))+
 #   theme(legend.position = "bottom")
