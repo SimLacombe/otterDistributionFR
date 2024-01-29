@@ -24,7 +24,7 @@ otterDat <- readRDS(data.filename) %>%
 ### Keep only PACA ###
 
 otterDat <- otterDat %>% 
-  filter(region %in% c("Bretagne", "Anjou", "Vendée"), year %in% 2000:2023)
+  filter(region %in% c("Bretagne", "Anjou", "Vendée", "Normandie"), year %in% 2009:2023)
 
 ### Get individual transects ### 
 
@@ -46,7 +46,7 @@ map.filename <- "data/map_fr.rds"
 grid.filename <- "data/L9310x10grid.rds"
 
 map <- readRDS(map.filename) %>%
-  filter(code_insee %in% c("52", "53")) %>%
+  filter(code_insee %in% c("28","52", "53")) %>%
   st_union()
 
 L93_grid <- readRDS(grid.filename) %>%
