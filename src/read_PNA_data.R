@@ -248,9 +248,11 @@ otter.dat <- rbind(otter.dat, dat)
 
 dat.filename <- "data/PNA-data/BourgogneFrancheComté-LPOBFA/Copie de Données_loutre_LPOBFC_thèse.csv"
 dat <- read.csv(dat.filename, sep = ";")
-  
+
+dat$Remarque <- iconv(dat$Remarque, from = "ISO-8859-1", to = "UTF-8")%>%toupper
+
 dat <- dat %>% 
-  mutate(PNA.protocole = grepl("Protocole standard", Protocole), 
+  mutate(PNA.protocole = (Protocole == "Protocole standard maille 10x10km adapt\xe9 \xe0 la Franche-Comt\xe9"|grepl("PRA", Remarque)|grepl("PAR", Remarque)), 
          date = as.Date(Date, format = "%d/%m/%Y"),
          loc = NA,
          presence = sign(Nombre),
@@ -352,9 +354,9 @@ otter.dat <- rbind(otter.dat, dat)
 ### Some plots -----------------------------------------------------------------
 
 otter.dat %>%
-  filter(year %in% 2009:2023) %>%
+  filter(year %in% 2009:2023, PNA.protocole|presence) %>%
   group_by(grid.cell) %>%
-  summarize(cell.status = ifelse(any(PNA.protocole)&any(presence>0), "Présente - protocolé",
+  summarize(cell.status = ifelse(any(PNA.protocole&presence>0), "Présente - protocolé",
                                  ifelse(any(presence > 0),"Présente - opportuniste", 
                                         "Non observée")),
             nsample = n()) %>%
