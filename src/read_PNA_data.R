@@ -221,6 +221,39 @@ dat <- dat %>%
 
 otter.dat <- rbind(otter.dat, dat)
 
+### 6bis. LPO Sarthe
+
+dat.filename <- "data/PNA-data/PaysdelaLoire-LPOsarthe/Export_données_loutre_SFEPM_CEFE_LPO_Sarthe 31_01_2024.xlsx"
+
+dat <- readxl::read_xlsx(dat.filename)
+
+
+dat <- dat %>% 
+  mutate(Remarques = toupper(Remarques),
+         tr_len = as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\d\\dM"))),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\d\\d M"))), tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\d M"))), tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\dM"))), tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\dKM")))*100, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\dKM")))*10000, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d KM")))*1000, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d KM")))*1000, tr_len))%>%
+  mutate(PNA.protocole = grepl("PNA", Remarques)|grepl("PRA", Remarques)|grepl("UICN", Remarques)|grepl("POINT", Remarques),
+         PNA.protocole = PNA.protocole|tr_len >= 300,
+         PNA.protocole = ifelse(is.na(PNA.protocole), FALSE, PNA.protocole))%>%
+  mutate(date = as.Date(Date),
+         year = year(date),
+         presence = sign(Nombre),
+         region = "Sarthe",
+         data.provider = "LPO",
+         loc = paste(Commune, `Lieu-dit`, sep = ".")) %>%
+  rename(lon.l93 = `X Lambert93 [m]`,
+         lat.l93 = `Y Lambert93 [m]`,
+         grid.cell = Maille) %>%
+  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+
+otter.dat <- rbind(otter.dat, dat)
+
 ### 7. LPO AuRA ###
 
 dat.filename <- "data/PNA-data/RhônesAlpes-LPOAURA&GMA/data_LPOAURA_GMA.csv"
@@ -376,8 +409,8 @@ otter.dat <- rbind(otter.dat, dat)
 ### Some plots -----------------------------------------------------------------
 
 otter.dat %>%
-  filter(year %in% 2009:2023, PNA.protocole|presence) %>%
-  group_by(year, grid.cell) %>%
+  filter(year %in% 2009:2023, PNA.protocole|presence, region == "Anjou") %>%
+  group_by(period = year %/% 4, grid.cell) %>%
   summarize(cell.status = ifelse(any(PNA.protocole&presence>0), "Présente - protocolé",
                                  ifelse(any(presence > 0),"Présente - opportuniste", 
                                         "Non observée")),
@@ -390,7 +423,7 @@ otter.dat %>%
     scale_fill_manual(name = "", values = c("orange", "lightblue", "darkblue"))+
     theme_bw()+
     theme(legend.position = "bottom")+
-    facet_wrap(~year)
+  facet_wrap(~paste0(period * 4, " - ", period * 4 + 3))
 
 # otter.dat %>%
 #   filter(year %in% 2008:2023) %>%
