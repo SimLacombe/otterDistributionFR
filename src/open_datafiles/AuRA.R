@@ -29,11 +29,20 @@ dat <- dat %>%
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\dKM")))*10000, tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d\\d KM")))*1000, tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d KM")))*1000, tr_len)) %>% 
-  mutate(PNA.protocole = ((grepl("IUCN", comment)|grepl("UICN", comment)|grepl("PROTOCOL", comment_priv)|grepl("PROTOCOL", comment)|grepl("PNA", comment))&
-                            (!grepl("FRAPNA", comment)|!grepl("NON PROTOCOL", comment)|!grepl("NON PROTOCOL", comment_priv)|
-                               !grepl("NON-PROTOCOL", comment_priv)|!grepl("NON-PROTOCOL", comment))),
+  mutate(PNA.protocole = ((grepl("IUCN", comment)|grepl("UICN", comment)|grepl("PROTOCOL", comment_priv)|grepl("PROTOCOL", comment)|grepl("PNA", comment))&!
+                            (grepl("FRAPNA", comment)|grepl("NON PROTOCOL", comment)|grepl("NON PROTOCOL", comment_priv)|
+                               grepl("NON-PROTOCOL", comment_priv)|grepl("NON-PROTOCOL", comment))),
          PNA.protocole = PNA.protocole|tr_len >= 300,
          PNA.protocole = ifelse(is.na(PNA.protocole), FALSE, PNA.protocole))
 
 dat <- dat%>%
   select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+
+# QU'est ce que : 
+# * ETUDE PRÉALABLE À LA DÉFINITION DU CONTRAT DE BIODIVERSITÉ DU HAUT-RHÔNE 2011-2015. SYNDICAT DU HAUT-RHÔNE (29),
+# * @LDBRUT:PONT DE VARÉZIEU; @NSA:0; @MALE:0; @FEMELLE:0; @STATUT:ABS; @SOURCE:2008-0184;@OBSERVATEURS:DUPOUX E. & LUCAS J.; @IDCORA:270586 (178)
+# * FRAPNA : ATLAS MAMMALO (64), LPO (54), ... total 180
+# * ETUDE LOUTRE CASTOR (91)
+# * FNE LOIRE 2020 (117)
+
+

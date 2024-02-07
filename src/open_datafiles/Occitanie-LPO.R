@@ -15,5 +15,7 @@ dat <- dat %>%
          loc = `Lieu-dit`) %>%
   rename(lon.l93 = `X Lambert93 [m]`,
          lat.l93 = `Y Lambert93 [m]`,
-         grid.cell = Maille) %>%
+         grid.cell = Maille)
+
+dat <- dat %>%
   select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
