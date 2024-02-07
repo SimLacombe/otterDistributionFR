@@ -59,7 +59,6 @@ dat[, c("lon.l93", "lat.l93")] <- dat %>%
   st_transform(crs = 2154) %>%
   st_coordinates()
 
-
 dat <- dat %>%
   mutate(grid.cell = ifelse(lon.l93 >= 1000000,
                             paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
@@ -178,8 +177,8 @@ dat <- dat %>%
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\d\\d M"))), tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\d M"))), tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\dM"))), tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\dKM")))*100, tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\dKM")))*10000, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\dKM")))*1000, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\dKM")))*1000, tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d KM")))*1000, tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d KM")))*1000, tr_len))%>%
   mutate(PNA.protocole = grepl("PNA", Remarques)|grepl("PRA", Remarques)|grepl("UICN", Remarques)|grepl("POINT", Remarques),
@@ -206,8 +205,8 @@ dat <- readxl::read_xlsx(dat.filename, skip = 1)
 names(dat) <- names(readxl::read_xlsx(dat.filename, n_max = 1))
 
 dat <- dat %>% 
-  mutate(COMMENT = toupper(COMMENT))%>%
-  mutate(PNA.protocole = NAME == "Marais Breton"|TRA_NAME == "Marais Breton", 
+  mutate(COMMENT = toupper(COMMENT), NAME = toupper(NAME), TRA_NAME = toupper(TRA_NAME))%>%
+  mutate(PNA.protocole = NAME == "MARAIS BRETON"|TRA_NAME == "MARAIS BRETON", 
          date = as.Date(DATE),
          year = year(date),
          presence = sign(TOTAL_COUNT),
@@ -234,8 +233,8 @@ dat <- dat %>%
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\d\\d M"))), tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\d M"))), tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\dM"))), tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\dKM")))*100, tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\dKM")))*10000, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\dKM")))*1000, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\dKM")))*1000, tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d KM")))*1000, tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d KM")))*1000, tr_len))%>%
   mutate(PNA.protocole = grepl("PNA", Remarques)|grepl("PRA", Remarques)|grepl("UICN", Remarques)|grepl("POINT", Remarques),
@@ -256,27 +255,45 @@ otter.dat <- rbind(otter.dat, dat)
 
 ### 7. LPO AuRA ###
 
-dat.filename <- "data/PNA-data/RhônesAlpes-LPOAURA&GMA/data_LPOAURA_GMA.csv"
+dat.filename <- "data/PNA-data/RhônesAlpes-LPOAURA&GMA/data_loutre_ORB_AURA.gpkg"
 
-dat <- read.csv(dat.filename)
+dat <- read_sf(dat.filename)
+
+dat[, c("lon.l93", "lat.l93")] <- dat %>%
+  st_coordinates()
+
 dat <- dat %>% 
-  mutate(PNA.protocole = FALSE, 
-         date = NA,
-         loc = NA,
-         presence = as.numeric(obs=="presence"),
+  as_data_frame() %>% 
+  filter(desc_source == "[LPO] visionature") %>% 
+  mutate(year = year(date),
+         loc = place,
+         presence = as.numeric(is_present),
          region = "Auvergne Rhône-Alpes",
          data.provider = "LPO",
-         grid.cell = ifelse(X >= 1000000,
-                            paste0("E", substr(X,1,3),"N",substr(Y,1,3)),
-                            paste0("E0", substr(X,1,2),"N",substr(Y,1,3)))) %>%
-  rename(lon.l93 = X,
-         lat.l93 = Y,
-         year = annee) %>%
+         grid.cell = ifelse(lon.l93 >= 1000000,
+                            paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
+                            paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))
+
+dat <- dat %>% 
+  mutate(comment = toupper(comment), comment_priv = toupper(comment_priv)) %>%
+  mutate(tr_len = as.numeric(gsub("\\D", "", str_extract(comment, "\\d\\d\\d\\dM"))),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d\\d\\d\\d M"))), tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d\\d\\d M"))), tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d\\d\\dM"))), tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d\\dKM")))*100, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\dKM")))*10000, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d\\d KM")))*1000, tr_len),
+         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d KM")))*1000, tr_len)) %>% 
+  mutate(PNA.protocole = ((grepl("IUCN", comment)|grepl("UICN", comment)|grepl("PROTOCOL", comment_priv)|grepl("PROTOCOL", comment)|grepl("PNA", comment))&
+           (!grepl("FRAPNA", comment)|!grepl("NON PROTOCOL", comment)|!grepl("NON PROTOCOL", comment_priv)|
+           !grepl("NON-PROTOCOL", comment_priv)|!grepl("NON-PROTOCOL", comment))),
+         PNA.protocole = PNA.protocole|tr_len >= 300,
+         PNA.protocole = ifelse(is.na(PNA.protocole), FALSE, PNA.protocole))
+
+dat <- dat%>%
   select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 otter.dat <- rbind(otter.dat, dat)
-otter.dat <- otter.dat %>%
-  filter(year >= 2000)
 
 ### 8. GRIFS Aquitaine ###
 
@@ -409,11 +426,11 @@ otter.dat <- rbind(otter.dat, dat)
 ### Some plots -----------------------------------------------------------------
 
 otter.dat %>%
-  filter(year %in% 2009:2023, PNA.protocole|presence, region == "Anjou") %>%
+  filter(year %in% 2009:2023, PNA.protocole|presence) %>%
   group_by(period = year %/% 4, grid.cell) %>%
   summarize(cell.status = ifelse(any(PNA.protocole&presence>0), "Présente - protocolé",
                                  ifelse(any(presence > 0),"Présente - opportuniste", 
-                                        "Non observée")),
+                                        "Non observée - protocolé")),
             nsample = n()) %>%
   left_join(grid[,c("geometry", "grid.cell")], by = "grid.cell") %>%
   st_as_sf %>%
