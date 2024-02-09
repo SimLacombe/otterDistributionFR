@@ -19,8 +19,7 @@ dat <- dat %>%
          presence = as.numeric(statut_observation  == "Présent"),
          region = "Bretagne", 
          data.provider = "GMB") %>%
-  rename(loc = communes)%>%
-  filter(PNA.protocole|as.logical(presence))
+  rename(loc = communes)
 
 dat[, c("lon.l93", "lat.l93")] <- dat %>%
   st_as_sf(coords = c("x_centroid_4326", "y_centroid_4326"), crs = 4326) %>%

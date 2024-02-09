@@ -1,4 +1,4 @@
-require(tidyverse, lubridate)
+require(tidyverse, lubridate, sf)
 
 dat.filename <- "data/PNA-data/RhônesAlpes-LPOAURA&GMA/data_loutre_ORB_AURA.gpkg"
 

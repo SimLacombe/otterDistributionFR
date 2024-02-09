@@ -59,6 +59,8 @@ otter.dat %>%
   st_as_sf %>%
   ggplot()+
     geom_sf(data=map_FR)+
+  geom_point(data = otter.dat %>% filter(year %in% 2009:2023, !PNA.protocole&!presence) %>%
+               mutate(period = year %/% 4), aes(x=lon.l93, y = lat.l93), alpha = 0.1)+
     geom_sf(aes(fill = cell.status))+
     scale_fill_manual(name = "", values = c("orange", "lightblue", "darkblue"))+
     theme_bw()+
