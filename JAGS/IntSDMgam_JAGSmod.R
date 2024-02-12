@@ -65,7 +65,7 @@ model{
   
   K1 <- S1[1:(nspline-1),1:(nspline-1)] * lambda_gam
   
-  b[1, 1] ~ dnorm(0, 0.1)
+  b[1, 1] ~ dnorm(-4.6, 0.75)
   b[2:nspline, 1] ~ dmnorm(zero[2:nspline],K1)
   
   for(jj in 1:nspline){

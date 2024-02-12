@@ -24,7 +24,7 @@ otterDat <- readRDS(data.filename) %>%
 ### Keep only PACA ###
 
 otterDat <- otterDat %>% 
-  filter(region %in% c("Bretagne", "Anjou", "Vendée", "Normandie"), year %in% 2009:2023)
+  filter(year %in% 2009:2023, !is.na(date))
 
 ### Get individual transects ### 
 
@@ -46,7 +46,6 @@ map.filename <- "data/map_fr.rds"
 grid.filename <- "data/L9310x10grid.rds"
 
 map <- readRDS(map.filename) %>%
-  filter(code_insee %in% c("28","52", "53")) %>%
   st_union()
 
 L93_grid <- readRDS(grid.filename) %>%
@@ -62,7 +61,7 @@ npixel <- nrow(L93_grid)
 L93_grid$intercept <- 1
 
 ### Format data to run JAGS mod ### 
-tmp.res <- 4 #years
+tmp.res <- 1 #years
 
 otterDat$period = otterDat$year %/% tmp.res
 
@@ -115,6 +114,7 @@ gamDat <- jagam(y ~ s(E,N, k = 10, bs = "ds", m = c(1,0.5)),
                  data = tmpDat, file = jags.file, 
                  family = "binomial")
 
+gamDat$jags.ini$b[1] <- -4.6 #log area of cells
 
 ### Fit JAGS mod ### 
 
@@ -139,7 +139,7 @@ data.list <- list(cell_area = L93_grid$logArea,
                   K = pa.dat$K,
                   ones = po.dat$ones,
                   zero = gamDat$jags.data$zero,
-                  cste = 1000)
+                  cste = 1)
 
 source("src/jags_ini.R")
 
@@ -155,7 +155,6 @@ mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
                 summarise = TRUE,
                 plots = TRUE,
                 method = "parallel")
-
 
 denplot(as.mcmc.list(mod), parms= c("beta_lam", "beta_rho", "beta_thin", "lambda_gam"), collapse = FALSE)
 
