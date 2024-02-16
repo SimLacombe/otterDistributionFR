@@ -114,6 +114,7 @@ gamDat <- jagam(y ~ s(E,N, k = 10, bs = "ds", m = c(1,0.5)),
                  data = tmpDat, file = jags.file, 
                  family = "binomial")
 
+gamDat$jags.ini$b[1] <- -4.6 #log area of cells
 
 ### Fit JAGS mod ### 
 
@@ -141,12 +142,13 @@ data.list <- list(cell_area = L93_grid$logArea,
                   cste = 1000)
 
 source("src/jags_ini.R")
+inits <- foreach(i = 1:4)%do%{my_inits(i)}
 
 mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
                 monitor = c("z", "lambda", "beta_lam", "beta_rho", "beta_thin", "b", "lambda_gam"),
                 data = data.list,
                 n.chains = 4,
-                inits = my_inits,
+                inits = inits,
                 adapt = 500,
                 burnin = 1000,
                 sample = 1000,
@@ -154,7 +156,6 @@ mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
                 summarise = TRUE,
                 plots = TRUE,
                 method = "parallel")
-
 
 denplot(as.mcmc.list(mod), parms= c("beta_lam", "beta_rho", "beta_thin", "lambda_gam"), collapse = FALSE)
 
@@ -187,7 +188,7 @@ ggplot(map)+
   geom_sf(data = otterDat, aes(color = dataType), alpha = 0.5, size = .6)+
   # geom_sf(data = riv_nw, aes(alpha = log(UP_CELLS)), color = "#002266", show.legend = FALSE)+
   scale_color_manual(values = c("red", "blue", "black"))+
-  scale_fill_gradient(low = "white", high = "springgreen4", name = "psi")+
+  scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0.5, name = "psi")+
   facet_wrap(~paste0(period*tmp.res, " - ", period*tmp.res+tmp.res-1))+
   theme_bw()
 
