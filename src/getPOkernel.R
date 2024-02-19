@@ -34,18 +34,22 @@ L93_grid <- readRDS(grid.filename) %>%
 ### Get KDE ###
 timesteps <- unique(otterDat$period)
 
-grid.kde <- foreach(timestep = timesteps, .combine = rbind) %do% {
+kde <- foreach(timestep = timesteps, .combine = cbind) %do% {
   
   kde(PO.dat %>% filter(period == timestep),
       band_width = 35000, grid = L93_grid) %>% 
-    mutate(period = timestep)
+    .$kde_value
 }
 
-ggplot(grid.kde) + 
+L93_grid <- cbind(L93_grid, kde)
+colnames(L93_grid)[2:5] <- paste0("kde.", timesteps)
+
+L93_grid %>% 
+  pivot_longer(cols = all_of(paste0("kde.", timesteps)), names_to = "var", values_to = "kde_value") %>%
+ggplot() + 
   geom_sf(aes(fill = log(kde_value)))+
   geom_sf(data = PO.dat, aes(col = factor(presence)), pch = 4, alpha = 0.5)+
   scale_color_manual(values = c("red", "black"))+
-  facet_wrap(~paste0(period*tmp.res, " - ", period*tmp.res+tmp.res-1))
+  facet_wrap(~var)
 
-
-# saveRDS(grid.kde, "data/L9310x10grid_KDE.rds")
+# saveRDS(L93_grid, "data/L9310x10grid_KDE.rds")

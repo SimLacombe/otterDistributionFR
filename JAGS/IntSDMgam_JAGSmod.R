@@ -39,11 +39,11 @@ model{
   
   ## PRESENCE-ONLY DATA MODEL ##
   for(t in 1:nyear){
-    po_denominator[t] <- inprod(lambda[1:npixel, t], thin_prob[1:npixel] ) / npo[t]
+    po_denominator[t] <- inprod(lambda[1:npixel, t], thin_prob[1:npixel, t] ) / npo[t]
     for(po in (po.idxs[t]+1):po.idxs[t+1]){
       ones[po] ~ dbern(
         exp(
-          log(lambda[po_pixel[po], t]*thin_prob[po_pixel[po]]) -
+          log(lambda[po_pixel[po], t]*thin_prob[po_pixel[po], t]) -
             log(po_denominator[t])
         ) / cste
       )
@@ -59,7 +59,9 @@ model{
   
   ## LINEAR PREDICTORS
   for(pixel in 1:npixel){
-    logit(thin_prob[pixel]) <- inprod(x_thin[pixel,], beta_thin)
+    for(t in 1:nyear){
+      logit(thin_prob[pixel, t]) <- inprod(x_thin[pixel,], beta_thin) + inprod(sampl_eff[pixel, t], beta_sampl)
+    }
     logit(rho[pixel]) <-inprod(x_rho[pixel, ], beta_rho)
   }
   
@@ -84,7 +86,7 @@ model{
   for(cov in 1:ncov_rho){
     beta_rho[cov] ~ dlogis(0, 1)
   }
-  
+  beta_sampl ~ dlogis(0,1)
 
   lambda_gam ~ dgamma(.05,.005)
   tau_gam ~ dgamma(1,1)

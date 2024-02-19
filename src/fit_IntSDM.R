@@ -48,11 +48,13 @@ grid.filename <- "data/L9310x10grid_KDE.rds"
 map <- readRDS(map.filename) %>%
   st_union()
 
-L93_grid <- readRDS(grid.filename) %>%
-  st_intersection(map) %>%
-  dplyr::select(grid.cell)
+L93_grid.sp <- readRDS(grid.filename) %>%
+  st_intersection(map)
 
-L93_grid$logArea <- log(as.numeric(st_area(L93_grid))/1000**2)
+L93_grid <- L93_grid.sp %>%
+  st_drop_geometry()
+
+L93_grid$logArea <- log(as.numeric(st_area(L93_grid.sp))/1000**2)
 
 npixel <- nrow(L93_grid)
 
@@ -107,7 +109,7 @@ nperiod <- length(unique(pa.dat$period))
 
 jags.file <- "JAGS/test.jags"
 
-tmpDat <- data.frame(1, st_coordinates(st_centroid(st_transform(L93_grid, crs = 4326))))
+tmpDat <- data.frame(1, st_coordinates(st_centroid(st_transform(L93_grid.sp, crs = 4326))))
 names(tmpDat) <- c("y", "E", "N")
   
 gamDat <- jagam(y ~ s(E,N, k = 10, bs = "ds", m = c(1,0.5)),
@@ -125,13 +127,14 @@ data.list <- list(cell_area = L93_grid$logArea,
                   nspline = length(gamDat$jags.data$zero),
                   po.idxs = po.idxs,
                   pa.idxs = pa.idxs,
-                  x_lam =  matrix(L93_grid[,c("intercept")], npixel, 1),
-                  x_thin = matrix(L93_grid[,c("intercept", "kde_value")], npixel, 1),
-                  x_rho =  matrix(L93_grid[,c("intercept")], npixel, 1),
+                  x_lam =  matrix(L93_grid$intercept, npixel, 1),
+                  x_thin = matrix(L93_grid$intercept, npixel, 1),
+                  x_rho =  matrix(L93_grid$intercept, npixel, 1),
+                  sampl_eff = as.matrix(L93_grid[, 2:5]),
                   x_gam = gamDat$jags.data$X,
                   S1 = gamDat$jags.data$S1,
                   ncov_lam = 1,
-                  ncov_thin = 2,
+                  ncov_thin = 1,
                   ncov_rho = 1,
                   po_pixel = po.dat$pixel,
                   pa_pixel = pa.dat$pixel,
@@ -157,7 +160,7 @@ mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
                 plots = TRUE,
                 method = "parallel")
 
-denplot(as.mcmc.list(mod), parms= c("beta_lam", "beta_rho", "beta_thin", "lambda_gam"), collapse = FALSE)
+denplot(as.mcmc.list(mod), parms= c("beta_lam", "beta_rho", "beta_thin", "lambda_gam", "beta_sampl"), collapse = FALSE)
 
 mod.mat <- as.matrix(as.mcmc.list(mod), chains = T)
 
