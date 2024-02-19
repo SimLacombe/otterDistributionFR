@@ -43,7 +43,7 @@ otterDat <- otterDat %>%
 ### Get gridded landscape ### 
 
 map.filename <- "data/map_fr.rds"
-grid.filename <- "data/L9310x10grid.rds"
+grid.filename <- "data/L9310x10grid_KDE.rds"
 
 map <- readRDS(map.filename) %>%
   st_union()
@@ -125,13 +125,13 @@ data.list <- list(cell_area = L93_grid$logArea,
                   nspline = length(gamDat$jags.data$zero),
                   po.idxs = po.idxs,
                   pa.idxs = pa.idxs,
-                  x_lam =  matrix(L93_grid$intercept, npixel, 1),
-                  x_thin = matrix(L93_grid$intercept, npixel, 1),
-                  x_rho =  matrix(L93_grid$intercept, npixel, 1),
+                  x_lam =  matrix(L93_grid[,c("intercept")], npixel, 1),
+                  x_thin = matrix(L93_grid[,c("intercept", "kde_value")], npixel, 1),
+                  x_rho =  matrix(L93_grid[,c("intercept")], npixel, 1),
                   x_gam = gamDat$jags.data$X,
                   S1 = gamDat$jags.data$S1,
                   ncov_lam = 1,
-                  ncov_thin = 1,
+                  ncov_thin = 2,
                   ncov_rho = 1,
                   po_pixel = po.dat$pixel,
                   pa_pixel = pa.dat$pixel,
