@@ -180,15 +180,15 @@ lam.sd.df <- data.frame(lam.sd = c(lam.sd),
 #   st_transform(crs = 2154) %>%
 #   st_intersection(map)
 
-otterDat <- otterDat%>%
+otterDat.toplot <- otterDat%>%
   filter(PNA.protocole|as.logical(presence)) %>% 
   mutate(dataType = ifelse(PNA.protocole&as.logical(presence), "PNA presence",
                            ifelse(PNA.protocole, "PNA absence", "presence Opportuniste")))
 
 ggplot(map)+
   geom_sf()+
-  geom_sf(data = lam.est.df, aes(geometry = rep(L93_grid$geometry, nperiod), fill = 1-exp(-mean.lam)), alpha = 0.85) +
-  geom_sf(data = otterDat, aes(color = dataType), alpha = 0.5, size = .6)+
+  geom_sf(data = lam.est.df, aes(geometry = rep(L93_grid.sp$geometry, nperiod), fill = 1-exp(-mean.lam)), alpha = 0.85) +
+  geom_sf(data = otterDat.toplot, aes(color = dataType), alpha = 0.5, size = .6)+
   # geom_sf(data = riv_nw, aes(alpha = log(UP_CELLS)), color = "#002266", show.legend = FALSE)+
   scale_color_manual(values = c("red", "blue", "black"))+
   scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0.5, name = "psi")+
