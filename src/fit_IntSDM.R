@@ -1,7 +1,6 @@
 library(tidyverse)
 library(foreach)
 library(sf)
-library(concom)
 
 library(LaplacesDemon)
 library(runjags)
@@ -12,38 +11,24 @@ library(mgcv)
 
 rm(list = ls())
 
-source("src/utility_functions.R")
+outpath <- "outMod/240222_BrPdLNo.rds"
 
 ### Load data ###
 
-data.filename <- "data/otterDat.rds"
+data.filename <- "data/otterDatCleaned.rds"
 
 otterDat <- readRDS(data.filename) %>% 
-  st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)
+  st_as_sf(coords = geometry, crs = 2154)
 
 ### Keep only PACA ###
 
-otterDat <- otterDat %>% 
-  filter(year %in% 2009:2023, !is.na(date))
-
-### Get individual transects ### 
-
-thr.space <- 500
-thr.time <- 2
-
-otterDat <- otterDat %>% 
-  group_by(PNA.protocole, year, grid.cell) %>%
-  mutate(obs = collapse_transects(date, geometry, thr.space, thr.time)) %>% 
-  group_by(PNA.protocole, year, grid.cell, obs) %>%
-  arrange(desc(presence)) %>%
-  filter(row_number()==1) %>% 
-  arrange(year, grid.cell) %>%
-  filter(obs < 6)
+otterDat <- otterDat 
 
 ### Get gridded landscape ### 
 
 map.filename <- "data/map_fr.rds"
-grid.filename <- "data/L9310x10grid_KDE.rds"
+grid.filename <- "data/L9310x10grid.rds"
+# grid.filename <- "data/L9310x10grid_KDE.rds"
 
 map <- readRDS(map.filename) %>%
   st_union()
@@ -130,7 +115,7 @@ data.list <- list(cell_area = L93_grid$logArea,
                   x_lam =  matrix(L93_grid$intercept, npixel, 1),
                   x_thin = matrix(L93_grid$intercept, npixel, 1),
                   x_rho =  matrix(L93_grid$intercept, npixel, 1),
-                  sampl_eff = as.matrix(L93_grid[, 2:5]),
+                  # sampl_eff = as.matrix(L93_grid[, 2:5]),
                   x_gam = gamDat$jags.data$X,
                   S1 = gamDat$jags.data$S1,
                   ncov_lam = 1,
@@ -162,23 +147,36 @@ mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
 
 denplot(as.mcmc.list(mod), parms= c("beta_lam", "beta_rho", "beta_thin", "lambda_gam", "beta_sampl"), collapse = FALSE)
 
-mod.mat <- as.matrix(as.mcmc.list(mod), chains = T)
+out <- as.matrix(as.mcmc.list(mod), chains = T)
 
-z.est <- apply(mod.mat[, grep("z\\[", colnames(mod.mat))], 2, mean)
-lam.est <- apply(mod.mat[, grep("lambda\\[", colnames(mod.mat))], 2, mean)
-lam.sd <- apply(mod.mat[, grep("lambda\\[", colnames(mod.mat))], 2, sd)
+# saveRDS(out, outpath)
 
-lam.est.df <- data.frame(mean.lam = c(lam.est),
-                         period = rep(unique(otterDat$period), each = npixel),
-                         px = rep(1:npixel, nperiod))
+zzz <- out[, grep("z\\[", colnames(out))]
+zz <- array(NA, dim = c(nrow(zzz), ncol(zzz)/nperiod, nperiod))
+for(t in 1:nperiod){
+  zz[,,t] <- zzz[1:nrow(zzz), ((t-1) * ncol(zzz) / nperiod + 1):(t*ncol(zzz)/nperiod)]
+}
+z <- apply(zz, c(2,3), mean)
 
-lam.sd.df <- data.frame(lam.sd = c(lam.sd),
-                         period = rep(unique(otterDat$period), each = npixel),
-                         px = rep(1:npixel, nperiod))
+lll <- out[, grep("lambda\\[", colnames(out))]
+ll <- array(NA, dim = c(nrow(lll), ncol(lll)/nperiod, nperiod))
+for(t in 1:nperiod){
+  ll[,,t] <- lll[1:nrow(lll), ((t-1) * ncol(lll) / nperiod + 1):(t*ncol(lll)/nperiod)]
+}
+lam <- apply(ll, c(2,3), mean)
+
+rm("zzz", "zz", "lll", "ll")
 
 # riv_nw <- read_sf("data/eu_riv_30s/") %>%
 #   st_transform(crs = 2154) %>%
 #   st_intersection(map)
+
+z.df <- data.frame(grid.cell = rep(L93_grid$grid.cell, nperiod),
+                     meanz = c(z[, 1:nperiod]),
+                     period = rep(unique(po.dat$period), each = nrow(z))) %>%
+  left_join(L93_grid.sp, .)
+
+z.df$z.occupied <- ifelse(z.df$meanz > 0.25, "OCCUPIED", "UNOCCUPIED")
 
 otterDat.toplot <- otterDat%>%
   filter(PNA.protocole|as.logical(presence)) %>% 
@@ -187,13 +185,10 @@ otterDat.toplot <- otterDat%>%
 
 ggplot(map)+
   geom_sf()+
-  geom_sf(data = lam.est.df, aes(geometry = rep(L93_grid.sp$geometry, nperiod), fill = 1-exp(-mean.lam)), alpha = 0.85) +
+  geom_sf(data = z.df, aes(fill = z.occupied), alpha = 0.85) +
   geom_sf(data = otterDat.toplot, aes(color = dataType), alpha = 0.5, size = .6)+
   # geom_sf(data = riv_nw, aes(alpha = log(UP_CELLS)), color = "#002266", show.legend = FALSE)+
   scale_color_manual(values = c("red", "blue", "black"))+
-  scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0.5, name = "psi")+
+  scale_fill_manual(values = c('orange','white')) + 
   facet_wrap(~paste0(period*tmp.res, " - ", period*tmp.res+tmp.res-1))+
   theme_bw()
-
-
-

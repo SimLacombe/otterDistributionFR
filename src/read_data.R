@@ -2,8 +2,11 @@ library(tidyverse)
 library(lubridate)
 library(foreach)
 library(sf)
+library(concom)
 
 rm(list = ls())
+
+source("src/utility_functions.R")
 
 ### Read PNA data --------------------------------------------------------------
 
@@ -13,8 +16,6 @@ otter.dat <- foreach(src = list.files(src.path, full.names = TRUE),.combine = rb
   source(src)
   dat
 }
-
-rm(list = setdiff(ls(), "otter.dat"))
 
 ### Read FR. map and get L93 grid ----------------------------------------------
 
@@ -45,6 +46,30 @@ otter.dat[is.na(otter.dat$lat.l93), c("lon.l93", "lat.l93")] <- otter.dat[is.na(
 # saveRDS(otter.dat, "data/otterDat.rds")
 # saveRDS(grid, "data/L9310x10grid.rds")
 # saveRDS(map_FR, "data/map_fr.rds")
+
+### Remove redundant observations ----------------------------------------------
+
+thr.space <- 500
+thr.time <- 2
+
+otter.dat.clean <- otter.dat %>% 
+  filter(year %in% 2009:2023, !is.na(date))%>% 
+  st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)
+
+otter.dat.clean.PNA <- otter.dat.clean %>% 
+  filter(PNA.protocole) %>%
+  group_by(year, grid.cell) %>%
+  mutate(obs = collapse_transects(date, geometry, thr.space, thr.time)) %>% 
+  group_by(year, grid.cell, obs) %>%
+  arrange(desc(presence)) %>%
+  filter(row_number()==1) %>% 
+  arrange(year, grid.cell) %>%
+  filter(obs < 6) %>%
+  select(-obs)
+
+otter.dat.clean <- rbind(otter.dat.clean, otter.dat.clean.PNA)
+
+# saveRDS(otter.dat.clean, "data/otterDatCleaned.rds")
 
 ### Some plots -----------------------------------------------------------------
 
