@@ -18,7 +18,6 @@ outpath <- "outMod/240222_Fr.rds"
 data.filename <- "data/otterDatCleaned.rds"
 
 otterDat <- readRDS(data.filename) %>% 
-  filter(code_insee %in% c("93", "27", "76", "84")) %>%
   st_as_sf(coords = geometry, crs = 2154)
 
 ### Keep only PACA ###
@@ -30,8 +29,7 @@ otterDat <- otterDat
 grid.filename <- "data/L9310x10grid.rds"
 # grid.filename <- "data/L9310x10grid_KDE.rds"
 
-L93_grid.sp <- readRDS(grid.filename) %>% 
-  filter(code_insee %in% c("93", "27", "76", "84"))
+L93_grid.sp <- readRDS(grid.filename)
 
 L93_grid <- L93_grid.sp %>%
   st_drop_geometry()
@@ -54,7 +52,6 @@ pa.dat <- otterDat %>%
   summarize(K = n(),
             y = sum(presence))
 
-pa.dat <- filter(pa.dat, grid.cell %in% L93_grid$grid.cell)
 pa.dat$pixel <- sapply(pa.dat$grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
 
 npa <- pa.dat %>%
@@ -69,7 +66,6 @@ po.dat <- otterDat %>%
   group_by(period, grid.cell) %>%
   summarize()
 
-po.dat <- filter(po.dat, grid.cell %in% L93_grid$grid.cell)
 po.dat$pixel <- sapply(po.dat$grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
 po.dat$ones <- 1
 
