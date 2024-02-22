@@ -60,7 +60,8 @@ model{
   ## LINEAR PREDICTORS
   for(pixel in 1:npixel){
     for(t in 1:nyear){
-      logit(thin_prob[pixel, t]) <- inprod(x_thin[pixel,], beta_thin) + inprod(sampl_eff[pixel, t], beta_sampl)
+      # logit(thin_prob[pixel, t]) <- inprod(x_thin[pixel,], beta_thin) + inprod(sampl_eff[pixel, t], beta_sampl)
+      logit(thin_prob[pixel, t]) <- inprod(x_thin[pixel,], beta_thin)
     }
     logit(rho[pixel]) <-inprod(x_rho[pixel, ], beta_rho)
   }
@@ -86,7 +87,7 @@ model{
   for(cov in 1:ncov_rho){
     beta_rho[cov] ~ dlogis(0, 1)
   }
-  beta_sampl ~ dlogis(0,1)
+  # beta_sampl ~ dlogis(0,1)
 
   lambda_gam ~ dgamma(.05,.005)
   tau_gam ~ dgamma(1,1)
