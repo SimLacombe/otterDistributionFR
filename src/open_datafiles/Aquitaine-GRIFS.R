@@ -31,10 +31,9 @@ dat1 <- dat1%>%
   mutate(PNA.protocole = TRUE, 
          date = as.Date(date),
          loc = NA,
-         region = "Aquitaine",
          data.provider = "GRIFS",
          year = year(date)) %>%
-  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, presence)
+  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, presence)
 
 
 dat2 <- read.csv(dat2.filename, sep = "\t")
@@ -43,14 +42,13 @@ dat2 <- dat2 %>%
          date = as.Date(DateDebut),
          loc = NomCom,
          presence = as.numeric(StatPresen=="présent"),
-         region = "Aquitaine",
          data.provider = "GRIFS",
          grid.cell = Maille10,
          year = year(DateDebut)) %>%
   rowwise() %>%
   mutate(lon.l93 = as.numeric(strsplit(str_extract(string = GeomWkt, pattern = "(?<=\\().*(?=\\))"), " ")[[1]][1]),
          lat.l93 = as.numeric(strsplit(str_extract(string = GeomWkt, pattern = "(?<=\\().*(?=\\))"), " ")[[1]][2])) %>% 
-  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, presence)
+  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, presence)
 
 dat1.sf <- dat1%>%
   st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)
@@ -66,4 +64,4 @@ dat <- rbind(dat1, dat2)%>%
   mutate(grid.cell = ifelse(lon.l93 >= 1000000,
                             paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3)))) %>% 
-  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)

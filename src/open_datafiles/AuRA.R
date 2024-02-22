@@ -13,7 +13,6 @@ dat <- dat %>%
   mutate(year = year(date),
          loc = place,
          presence = as.numeric(is_present),
-         region = "Auvergne Rhône-Alpes",
          data.provider = "LPO",
          grid.cell = ifelse(lon.l93 >= 1000000,
                             paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
@@ -36,7 +35,7 @@ dat <- dat %>%
          PNA.protocole = ifelse(is.na(PNA.protocole), FALSE, PNA.protocole))
 
 dat <- dat%>%
-  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 # QU'est ce que : 
 # * ETUDE PRÉALABLE À LA DÉFINITION DU CONTRAT DE BIODIVERSITÉ DU HAUT-RHÔNE 2011-2015. SYNDICAT DU HAUT-RHÔNE (29),

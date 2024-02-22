@@ -11,13 +11,14 @@ library(mgcv)
 
 rm(list = ls())
 
-outpath <- "outMod/240222_BrPdLNo.rds"
+outpath <- "outMod/240222_Fr.rds"
 
 ### Load data ###
 
 data.filename <- "data/otterDatCleaned.rds"
 
 otterDat <- readRDS(data.filename) %>% 
+  filter(code_insee %in% c("93", "27", "76", "84")) %>%
   st_as_sf(coords = geometry, crs = 2154)
 
 ### Keep only PACA ###
@@ -26,28 +27,22 @@ otterDat <- otterDat
 
 ### Get gridded landscape ### 
 
-map.filename <- "data/map_fr.rds"
 grid.filename <- "data/L9310x10grid.rds"
 # grid.filename <- "data/L9310x10grid_KDE.rds"
 
-map <- readRDS(map.filename) %>%
-  st_union()
-
-L93_grid.sp <- readRDS(grid.filename) %>%
-  st_intersection(map)
+L93_grid.sp <- readRDS(grid.filename) %>% 
+  filter(code_insee %in% c("93", "27", "76", "84"))
 
 L93_grid <- L93_grid.sp %>%
   st_drop_geometry()
 
-L93_grid$logArea <- log(as.numeric(st_area(L93_grid.sp))/1000**2)
-
 npixel <- nrow(L93_grid)
 
-### Get Spatial covariates ### 
-
 L93_grid$intercept <- 1
+L93_grid$logArea <- log(as.numeric(st_area(L93_grid.sp))/1000**2)
 
 ### Format data to run JAGS mod ### 
+
 tmp.res <- 4 #years
 
 otterDat$period = otterDat$year %/% tmp.res
@@ -59,6 +54,7 @@ pa.dat <- otterDat %>%
   summarize(K = n(),
             y = sum(presence))
 
+pa.dat <- filter(pa.dat, grid.cell %in% L93_grid$grid.cell)
 pa.dat$pixel <- sapply(pa.dat$grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
 
 npa <- pa.dat %>%
@@ -73,6 +69,7 @@ po.dat <- otterDat %>%
   group_by(period, grid.cell) %>%
   summarize()
 
+po.dat <- filter(po.dat, grid.cell %in% L93_grid$grid.cell)
 po.dat$pixel <- sapply(po.dat$grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
 po.dat$ones <- 1
 
@@ -84,17 +81,16 @@ po.idxs <- c(0, cumsum(npo))
 
 nperiod <- length(unique(pa.dat$period))
 
-### Get Laplacian matrix of the L93 grid ### 
-
-# cplx_crd <- complex(real = substr(L93_grid$grid.cell, 2,4),
-#                              imaginary = substr(L93_grid$grid.cell, 6,8))
-# D.mat <- sapply(cplx_crd, FUN = function(x){as.numeric(abs(x-cplx_crd))})
-
 ### Set up the GAM ###
 
 jags.file <- "JAGS/test.jags"
 
-tmpDat <- data.frame(1, st_coordinates(st_centroid(st_transform(L93_grid.sp, crs = 4326))))
+tmpDat <- L93_grid %>% 
+  st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)%>%
+  st_transform(crs = 4326) %>%
+  st_coordinates() %>%
+  data.frame(1, .)
+
 names(tmpDat) <- c("y", "E", "N")
   
 gamDat <- jagam(y ~ s(E,N, k = 10, bs = "ds", m = c(1,0.5)),
@@ -167,10 +163,6 @@ lam <- apply(ll, c(2,3), mean)
 
 rm("zzz", "zz", "lll", "ll")
 
-# riv_nw <- read_sf("data/eu_riv_30s/") %>%
-#   st_transform(crs = 2154) %>%
-#   st_intersection(map)
-
 z.df <- data.frame(grid.cell = rep(L93_grid$grid.cell, nperiod),
                      meanz = c(z[, 1:nperiod]),
                      period = rep(unique(po.dat$period), each = nrow(z))) %>%
@@ -187,7 +179,6 @@ ggplot(map)+
   geom_sf()+
   geom_sf(data = z.df, aes(fill = z.occupied), alpha = 0.85) +
   geom_sf(data = otterDat.toplot, aes(color = dataType), alpha = 0.5, size = .6)+
-  # geom_sf(data = riv_nw, aes(alpha = log(UP_CELLS)), color = "#002266", show.legend = FALSE)+
   scale_color_manual(values = c("red", "blue", "black"))+
   scale_fill_manual(values = c('orange','white')) + 
   facet_wrap(~paste0(period*tmp.res, " - ", period*tmp.res+tmp.res-1))+

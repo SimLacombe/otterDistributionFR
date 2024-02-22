@@ -24,10 +24,9 @@ dat <- dat %>%
   mutate(date = as.Date(DATE),
          year = year(date),
          presence = sign(TOTAL_COUNT),
-         region = "PACA",
          data.provider = "LPO",
          loc = paste(MUNICIPALITY, PLACE, sep = ".")) %>%
   rename(lon.l93 = COORD_LON_L93,
          lat.l93 = COORD_LAT_L93,
          grid.cell = GRID_NAME) %>%
-  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)

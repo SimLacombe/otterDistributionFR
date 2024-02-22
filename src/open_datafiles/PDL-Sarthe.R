@@ -21,10 +21,9 @@ dat <- dat %>%
   mutate(date = as.Date(Date),
          year = year(date),
          presence = sign(Nombre),
-         region = "Sarthe",
          data.provider = "LPO",
          loc = paste(Commune, `Lieu-dit`, sep = ".")) %>%
   rename(lon.l93 = `X Lambert93 [m]`,
          lat.l93 = `Y Lambert93 [m]`,
          grid.cell = Maille) %>%
-  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)

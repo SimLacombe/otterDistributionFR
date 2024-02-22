@@ -15,11 +15,10 @@ dat <- rbind(dat1[, names(dat1) %in% names(dat2)], dat2[, names(dat2) %in% names
          date = as.Date(DATE_OBS),
          loc = COMMUNE,
          presence = as.numeric(VIVANT=="VRAI"|EMPREINTES=="VRAI"|CROTTES=="VRAI"),
-         region = "Bourgogne.Franche.Comté",
          data.provider = "SHNA",
          grid.cell = LAMBERT_93,
          year = year(date),
          lon.l93 = NA,
          lat.l93 = NA) %>%
-  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 

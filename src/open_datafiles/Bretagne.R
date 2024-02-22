@@ -17,7 +17,6 @@ dat <- dat %>%
   mutate(date = as.Date(date_debut, format = "%d/%m/%Y"),
          year = year(date),
          presence = as.numeric(statut_observation  == "Présent"),
-         region = "Bretagne", 
          data.provider = "GMB") %>%
   rename(loc = communes)
 
@@ -33,4 +32,4 @@ dat <- dat %>%
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))
 
 dat <- dat %>%
-  select(data.provider, region,PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider,PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)

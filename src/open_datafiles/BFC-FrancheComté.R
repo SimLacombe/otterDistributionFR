@@ -10,10 +10,9 @@ dat <- dat %>%
          date = as.Date(Date, format = "%d/%m/%Y"),
          loc = NA,
          presence = sign(Nombre),
-         region = "Bourgogne.Franche.Comté",
          data.provider = "LPO",
          grid.cell = Maille,
          year = year(date),
          lon.l93 = NA,
          lat.l93 = NA) %>%
-  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)

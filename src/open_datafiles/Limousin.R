@@ -17,21 +17,20 @@ dat1 <- dat1%>%
   rename(lon.l93 = `X Lambert93 [m]`,
          lat.l93 = `Y Lambert93 [m]`,
          grid.cell = Maille) %>%
-  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 dat2 <- dat2%>%
   mutate(date = NA,
          year = `Année,N,24,15`,
          presence = sign(`Nombre,N,24,15`),
-         region = "Limousin",
          data.provider = "GMHL",
-         PNA.protocole = FALSE,
+         PNA.protocole = TRUE,
          loc = NA) %>%
   rename(lon.l93 = `X Lambert9,N,24,15`,
          lat.l93 = `Y Lambert9,N,24,15`) %>%
   mutate(grid.cell = ifelse(lon.l93 >= 1000000,
                             paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))%>%
-  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 dat <- rbind(dat1, dat2)

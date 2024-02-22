@@ -13,7 +13,6 @@ dat <- dat %>%
   mutate(PNA.protocole = grepl("LGV", ETUDE)|grepl("Euskadour", ETUDE)|grepl("BPL", ETUDE),
          year = year(date),
          presence = as.numeric(PRESENCE_LLU  == "Positif"),
-         region = "Aquitaine", 
          data.provider = "GREGE",
          loc = NA) %>% 
   rename(lon.l93 = POINT_X,
@@ -25,5 +24,5 @@ dat <- dat %>%
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))
 
 dat <- dat %>%
-  select(data.provider, region,PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence) 
+  select(data.provider,PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence) 
 

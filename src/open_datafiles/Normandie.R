@@ -15,7 +15,6 @@ dat <- dat %>%
          date = as.Date(`Date\r\nobservation`),
          year = year(date),
          presence = as.numeric(`Comportement\r\nN°1` != "0001/Absence d'indice"),
-         region = "Normandie",
          data.provider = "GMN") %>%
   rename(loc = `Nom INSEE`,
          lon.l93 = `Longitude Lambert 93`,
@@ -23,4 +22,4 @@ dat <- dat %>%
   mutate(grid.cell = ifelse(lon.l93 >= 1000000,
                             paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))%>%
-  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)

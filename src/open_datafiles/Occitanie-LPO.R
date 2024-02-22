@@ -10,7 +10,6 @@ dat <- dat %>%
          date = as.Date(Date),
          year = year(date),
          presence = sign(Nombre),
-         region = "Occitanie",
          data.provider = "LPO",
          loc = `Lieu-dit`) %>%
   rename(lon.l93 = `X Lambert93 [m]`,
@@ -18,4 +17,4 @@ dat <- dat %>%
          grid.cell = Maille)
 
 dat <- dat %>%
-  select(data.provider, region, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)

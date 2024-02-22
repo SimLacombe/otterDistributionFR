@@ -8,7 +8,7 @@ rm(list = ls())
 
 source("src/utility_functions.R")
 
-### Read PNA data --------------------------------------------------------------
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ LOAD DATA ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
 src.path <- "src/open_datafiles"
 
@@ -17,61 +17,77 @@ otter.dat <- foreach(src = list.files(src.path, full.names = TRUE),.combine = rb
   dat
 }
 
-### Read FR. map and get L93 grid ----------------------------------------------
+### CREATE GRID ---------------------------------------------------------------- 
 
-map_FR <- read_sf("data/regions-20180101-shp/") %>%
-  filter(!code_insee %in% c("04", "94", "02", "01", "03", "06")) %>%
-  rmapshaper::ms_simplify() %>%
-  st_transform(crs = 2154) 
+# map_FR <- read_sf("data/regions-20180101-shp/") %>%
+#   filter(!code_insee %in% c("04", "94", "02", "01", "03", "06")) %>%
+#   rmapshaper::ms_simplify() %>%
+#   st_transform(crs = 2154)
+#  
+# grid <- st_make_grid(map_FR, crs = 2154, 
+#                      cellsize = c(10000,10000),
+#                      offset = c(99000, 6130000)) %>% 
+#   st_as_sf
+# 
+# grid <- cbind(grid, st_coordinates(st_centroid(grid))) %>%
+#   rename(geometry = x,
+#          lon.l93 = X, lat.l93 = Y) %>%
+#   mutate(grid.cell = ifelse(lon.l93 >= 1000000,
+#                            paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
+#                            paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3)))) %>%
+#   st_intersection(st_union(map_FR))
+#           
+# grid <- st_join(grid, map_FR[, "code_insee"], largest = TRUE)
+# 
+# saveRDS(grid, "data/L9310x10grid.rds")
+# saveRDS(map_FR, "data/map_fr.rds")
+# 
 
-grid <- st_make_grid(map_FR, crs = 2154, 
-                     cellsize = c(10000,10000),
-                     offset = c(99000, 6130000)) %>% 
-  st_as_sf
+grid <- readRDS("data/L9310x10grid.rds")%>% 
+    st_as_sf(crs = 2154)
+map_FR <- readRDS("data/map_fr.rds")%>% 
+    st_as_sf(crs = 2154)
 
-grid <- cbind(grid, st_coordinates(st_centroid(grid))) %>%
-  rename(geometry = x,
-         lon.l93 = X, lat.l93 = Y) %>%
-  mutate(grid.cell = ifelse(lon.l93 >= 1000000,
-                           paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
-                           paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))
-          
-
-### Get approx lat/lon based on centroid of grid cell --------------------------
+### Get approx lat/lon for obs with missing coordinatess -----------------------
 
 otter.dat[is.na(otter.dat$lat.l93), c("lon.l93", "lat.l93")] <- otter.dat[is.na(otter.dat$lat.l93), "grid.cell"] %>%
   left_join(grid[,c("lon.l93", "lat.l93", "grid.cell")], by = "grid.cell") %>%
   select(lon.l93, lat.l93)
 
-# saveRDS(otter.dat, "data/otterDat.rds")
-# saveRDS(grid, "data/L9310x10grid.rds")
-# saveRDS(map_FR, "data/map_fr.rds")
+### Get Administrative regions -------------------------------------------------
+
+otter.dat$code_insee <- otter.dat %>% 
+  st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154) %>%
+  st_join(map_FR[, "code_insee"]) %>% .$code_insee
 
 ### Remove redundant observations ----------------------------------------------
 
-thr.space <- 500
-thr.time <- 2
+# thr.space <- 500
+# thr.time <- 2
+# 
+# otter.dat.clean <- otter.dat %>%
+#   filter(year %in% 2009:2023, !is.na(date))%>%
+#   st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)
+# 
+# otter.dat.clean.PNA <- otter.dat.clean %>%
+#   filter(PNA.protocole) %>%
+#   group_by(year, grid.cell) %>%
+#   mutate(obs = collapse_transects(date, geometry, thr.space, thr.time)) %>%
+#   group_by(year, grid.cell, obs) %>%
+#   arrange(desc(presence)) %>%
+#   filter(row_number()==1) %>%
+#   arrange(year, grid.cell) %>%
+#   filter(obs < 6) %>%
+#   select(-obs)
+# 
+# otter.dat.clean <- rbind(otter.dat.clean, otter.dat.clean.PNA)
 
-otter.dat.clean <- otter.dat %>% 
-  filter(year %in% 2009:2023, !is.na(date))%>% 
-  st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SAVE ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ### 
 
-otter.dat.clean.PNA <- otter.dat.clean %>% 
-  filter(PNA.protocole) %>%
-  group_by(year, grid.cell) %>%
-  mutate(obs = collapse_transects(date, geometry, thr.space, thr.time)) %>% 
-  group_by(year, grid.cell, obs) %>%
-  arrange(desc(presence)) %>%
-  filter(row_number()==1) %>% 
-  arrange(year, grid.cell) %>%
-  filter(obs < 6) %>%
-  select(-obs)
-
-otter.dat.clean <- rbind(otter.dat.clean, otter.dat.clean.PNA)
-
+# saveRDS(otter.dat, "data/otterDat.rds")
 # saveRDS(otter.dat.clean, "data/otterDatCleaned.rds")
 
-### Some plots -----------------------------------------------------------------
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PLOT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ### 
 
 otter.dat %>%
   filter(year %in% 2009:2023, PNA.protocole|presence) %>%
@@ -84,7 +100,7 @@ otter.dat %>%
   st_as_sf %>%
   ggplot()+
     geom_sf(data=map_FR)+
-  geom_point(data = otter.dat %>% filter(year %in% 2009:2023, !PNA.protocole&!presence) %>%
+    geom_point(data = otter.dat %>% filter(year %in% 2009:2023, !PNA.protocole&!presence) %>%
                mutate(period = year %/% 4), aes(x=lon.l93, y = lat.l93), alpha = 0.1)+
     geom_sf(aes(fill = cell.status))+
     scale_fill_manual(name = "", values = c("orange", "lightblue", "darkblue"))+
