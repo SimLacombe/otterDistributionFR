@@ -18,6 +18,7 @@ outpath <- "outMod/240222_Fr.rds"
 data.filename <- "data/otterDatCleaned.rds"
 
 otterDat <- readRDS(data.filename) %>% 
+  filter(code_insee %in% c("93", "27", "76", "84"))%>%
   st_as_sf(coords = geometry, crs = 2154)
 
 ### Keep only PACA ###
@@ -29,7 +30,8 @@ otterDat <- otterDat
 grid.filename <- "data/L9310x10grid.rds"
 # grid.filename <- "data/L9310x10grid_KDE.rds"
 
-L93_grid.sp <- readRDS(grid.filename)
+L93_grid.sp <- readRDS(grid.filename)%>%
+  filter(code_insee %in% c("93", "27", "76", "84"))
 
 L93_grid <- L93_grid.sp %>%
   st_drop_geometry()
@@ -47,7 +49,7 @@ otterDat$period = otterDat$year %/% tmp.res
 
 pa.dat <- otterDat %>%
   st_drop_geometry() %>%
-  filter(PNA.protocole) %>%
+  filter(PNA.protocole, grid.cell %in% L93_grid$grid.cell) %>%
   group_by(period, grid.cell) %>%
   summarize(K = n(),
             y = sum(presence))
@@ -62,7 +64,7 @@ pa.idxs <- c(0, cumsum(npa))
 
 po.dat <- otterDat %>%
   st_drop_geometry() %>%
-  filter(!PNA.protocole, as.logical(presence)) %>%
+  filter(!PNA.protocole, as.logical(presence), grid.cell %in% L93_grid$grid.cell) %>%
   group_by(period, grid.cell) %>%
   summarize()
 
@@ -129,7 +131,7 @@ mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
                 data = data.list,
                 n.chains = 4,
                 inits = inits,
-                adapt = 1000,
+                adapt = 500,
                 burnin = 1000,
                 sample = 1000,
                 thin = 1,
@@ -171,8 +173,7 @@ otterDat.toplot <- otterDat%>%
   mutate(dataType = ifelse(PNA.protocole&as.logical(presence), "PNA presence",
                            ifelse(PNA.protocole, "PNA absence", "presence Opportuniste")))
 
-ggplot(map)+
-  geom_sf()+
+ggplot()+
   geom_sf(data = z.df, aes(fill = z.occupied), alpha = 0.85) +
   geom_sf(data = otterDat.toplot, aes(color = dataType), alpha = 0.5, size = .6)+
   scale_color_manual(values = c("red", "blue", "black"))+

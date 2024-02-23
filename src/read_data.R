@@ -19,34 +19,34 @@ otter.dat <- foreach(src = list.files(src.path, full.names = TRUE),.combine = rb
 
 ### CREATE GRID ---------------------------------------------------------------- 
 
-# map_FR <- read_sf("data/regions-20180101-shp/") %>%
-#   filter(!code_insee %in% c("04", "94", "02", "01", "03", "06")) %>%
-#   rmapshaper::ms_simplify() %>%
-#   st_transform(crs = 2154)
-#  
-# grid <- st_make_grid(map_FR, crs = 2154, 
-#                      cellsize = c(10000,10000),
-#                      offset = c(99000, 6130000)) %>% 
-#   st_as_sf
-# 
-# grid <- cbind(grid, st_coordinates(st_centroid(grid))) %>%
-#   rename(geometry = x,
-#          lon.l93 = X, lat.l93 = Y) %>%
-#   mutate(grid.cell = ifelse(lon.l93 >= 1000000,
-#                            paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
-#                            paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3)))) %>%
-#   st_intersection(st_union(map_FR))
-#           
-# grid <- st_join(grid, map_FR[, "code_insee"], largest = TRUE)
-# 
-# saveRDS(grid, "data/L9310x10grid.rds")
-# saveRDS(map_FR, "data/map_fr.rds")
-# 
+map_FR <- read_sf("data/regions-20180101-shp/") %>%
+  filter(!code_insee %in% c("04", "94", "02", "01", "03", "06")) %>%
+  rmapshaper::ms_simplify() %>%
+  st_transform(crs = 2154)
 
-grid <- readRDS("data/L9310x10grid.rds")%>% 
-    st_as_sf(crs = 2154)
-map_FR <- readRDS("data/map_fr.rds")%>% 
-    st_as_sf(crs = 2154)
+grid <- st_make_grid(map_FR, crs = 2154,
+                     cellsize = c(10000,10000),
+                     offset = c(99000, 6130000)) %>%
+  st_as_sf
+
+grid <- cbind(grid, st_coordinates(st_centroid(grid))) %>%
+  rename(geometry = x,
+         lon.l93 = X, lat.l93 = Y) %>%
+  mutate(grid.cell = ifelse(lon.l93 >= 1000000,
+                           paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
+                           paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3)))) %>%
+  st_intersection(st_union(map_FR))
+
+grid <- st_join(grid, map_FR[, "code_insee"], largest = TRUE)
+
+saveRDS(grid, "data/L9310x10grid.rds")
+saveRDS(map_FR, "data/map_fr.rds")
+
+
+# grid <- readRDS("data/L9310x10grid.rds")%>% 
+#     st_as_sf(crs = 2154)
+# map_FR <- readRDS("data/map_fr.rds")%>% 
+#     st_as_sf(crs = 2154)
 
 ### Get approx lat/lon for obs with missing coordinatess -----------------------
 
@@ -62,30 +62,30 @@ otter.dat$code_insee <- otter.dat %>%
 
 ### Remove redundant observations ----------------------------------------------
 
-# thr.space <- 500
-# thr.time <- 2
-# 
-# otter.dat.clean <- otter.dat %>%
-#   filter(year %in% 2009:2023, !is.na(date))%>%
-#   st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)
-# 
-# otter.dat.clean.PNA <- otter.dat.clean %>%
-#   filter(PNA.protocole) %>%
-#   group_by(year, grid.cell) %>%
-#   mutate(obs = collapse_transects(date, geometry, thr.space, thr.time)) %>%
-#   group_by(year, grid.cell, obs) %>%
-#   arrange(desc(presence)) %>%
-#   filter(row_number()==1) %>%
-#   arrange(year, grid.cell) %>%
-#   filter(obs < 6) %>%
-#   select(-obs)
-# 
-# otter.dat.clean <- rbind(otter.dat.clean, otter.dat.clean.PNA)
+thr.space <- 500
+thr.time <- 2
+
+otter.dat.clean <- otter.dat %>%
+  filter(year %in% 2009:2023, !is.na(date))%>%
+  st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)
+
+otter.dat.clean.PNA <- otter.dat.clean %>%
+  filter(PNA.protocole) %>%
+  group_by(year, grid.cell) %>%
+  mutate(obs = collapse_transects(date, geometry, thr.space, thr.time)) %>%
+  group_by(year, grid.cell, obs) %>%
+  arrange(desc(presence)) %>%
+  filter(row_number()==1) %>%
+  arrange(year, grid.cell) %>%
+  filter(obs < 6) %>%
+  select(-obs)
+
+otter.dat.clean <- rbind(otter.dat.clean, otter.dat.clean.PNA)
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SAVE ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ### 
 
-# saveRDS(otter.dat, "data/otterDat.rds")
-# saveRDS(otter.dat.clean, "data/otterDatCleaned.rds")
+saveRDS(otter.dat, "data/otterDat.rds")
+saveRDS(otter.dat.clean, "data/otterDatCleaned.rds")
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PLOT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ### 
 
