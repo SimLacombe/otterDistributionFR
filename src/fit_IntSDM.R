@@ -6,83 +6,79 @@ library(LaplacesDemon)
 library(runjags)
 library(rjags)
 library(coda)
-library(mcmcplots)
-library(mgcv)
 
 rm(list = ls())
 
-outpath <- "outMod/240222_Fr.rds"
+regions = c("93", "27", "76", "84")
+tmp.res = 4 #years
+outpath = paste0("outMod/", Sys.Date(), "_", "reg",paste(regions, collapse = "."),"_res", tmp.res,"yrs", ".rds")
 
-### Load data ###
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA AND COVS ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+### Load data ------------------------------------------------------------------
 
-data.filename <- "data/otterDatCleaned.rds"
-
-otterDat <- readRDS(data.filename) %>% 
-  st_as_sf(coords = geometry, crs = 2154)
-
-### Keep only PACA ###
-
-otterDat <- otterDat 
-
-### Get gridded landscape ### 
-
+data.filename <- "data/otterDatFiltered.rds"
 grid.filename <- "data/L9310x10grid.rds"
 # grid.filename <- "data/L9310x10grid_KDE.rds"
 
-L93_grid.sp <- readRDS(grid.filename)
+otterDat <- readRDS(data.filename) %>% 
+  st_as_sf(crs = 2154)
 
-L93_grid <- L93_grid.sp %>%
-  st_drop_geometry()
+L93_grid <- readRDS(grid.filename) %>% 
+  st_as_sf(crs = 2154)
 
-npixel <- nrow(L93_grid)
+### Filter the region of interest ----------------------------------------------
+
+otterDat <- filter(otterDat, code_insee %in% regions)
+L93_grid <- filter(L93_grid, code_insee %in% regions)
+
+### Get offset and spatial covariates ------------------------------------------
 
 L93_grid$intercept <- 1
-L93_grid$logArea <- log(as.numeric(st_area(L93_grid.sp))/1000**2)
+L93_grid$logArea <- log(as.numeric(st_area(L93_grid))/1000**2)
 
-### Format data to run JAGS mod ### 
+### Get primary period ---------------------------------------------------------
 
-tmp.res <- 4 #years
+otterDat$period <- otterDat$year %/% tmp.res
 
-otterDat$period = otterDat$year %/% tmp.res
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~ FORMAT DATA FOR JAGS ~~~~~~~~~~~~~~~~~~~~~~~~ ###
+### Presence-Absence data ------------------------------------------------------
 
 pa.dat <- otterDat %>%
   st_drop_geometry() %>%
-  filter(PNA.protocole) %>%
+  filter(PNA.protocole, grid.cell %in% L93_grid$grid.cell) %>%
   group_by(period, grid.cell) %>%
   summarize(K = n(),
-            y = sum(presence))
+            y = sum(presence)) %>%
+  arrange(period)
 
 pa.dat$pixel <- sapply(pa.dat$grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
 
-npa <- pa.dat %>%
-  group_by(period) %>%
-  summarize(n = n()) %>% 
-  .$n
+npa <- unname(c(table(pa.dat$period)))
+
 pa.idxs <- c(0, cumsum(npa))
+
+### Presence-Only data ---------------------------------------------------------
 
 po.dat <- otterDat %>%
   st_drop_geometry() %>%
-  filter(!PNA.protocole, as.logical(presence)) %>%
+  filter(!PNA.protocole, as.logical(presence), grid.cell %in% L93_grid$grid.cell) %>%
   group_by(period, grid.cell) %>%
-  summarize()
+  summarize() %>%
+  arrange(period)
 
 po.dat$pixel <- sapply(po.dat$grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
 po.dat$ones <- 1
 
-npo <- po.dat %>%
-  group_by(period) %>%
-  summarize(n = n()) %>% 
-  .$n
+npo <- unname(c(table(po.dat$period)))
+
 po.idxs <- c(0, cumsum(npo))
 
-nperiod <- length(unique(pa.dat$period))
-
-### Set up the GAM ###
+### GAM Data -------------------------------------------------------------------
 
 jags.file <- "JAGS/test.jags"
 
 tmpDat <- L93_grid %>% 
-  st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)%>%
+  st_centroid() %>%
   st_transform(crs = 4326) %>%
   st_coordinates() %>%
   data.frame(1, .)
@@ -95,7 +91,10 @@ gamDat <- jagam(y ~ s(E,N, k = 10, bs = "ds", m = c(1,0.5)),
 
 gamDat$jags.ini$b[1] <- -4.6 #log area of cells
 
-### Fit JAGS mod ### 
+### Format data list -----------------------------------------------------------
+
+npixel <- nrow(L93_grid)
+nperiod <- length(unique(pa.dat$period))
 
 data.list <- list(cell_area = L93_grid$logArea,
                   npixel = npixel,
@@ -124,24 +123,37 @@ data.list <- list(cell_area = L93_grid$logArea,
 source("src/jags_ini.R")
 inits <- foreach(i = 1:4)%do%{my_inits(i)}
 
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN MODEL ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+### Params ---------------------------------------------------------------------
+
+N.CHAINS = 4
+
+ADAPT = 500
+BURNIN = 1000
+SAMPLE = 1000
+THIN = 1 
+  
+### Call jags ------------------------------------------------------------------
+
 mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
                 monitor = c("z", "lambda", "beta_lam", "beta_rho", "beta_thin", "b", "lambda_gam"),
                 data = data.list,
-                n.chains = 4,
                 inits = inits,
-                adapt = 1000,
-                burnin = 1000,
-                sample = 1000,
-                thin = 1,
+                n.chains = N.CHAINS,
+                adapt = ADAPT,
+                burnin = BURNIN,
+                sample = SAMPLE,
+                thin = THIN,
                 summarise = TRUE,
                 plots = TRUE,
                 method = "parallel")
 
-denplot(as.mcmc.list(mod), parms= c("beta_lam", "beta_rho", "beta_thin", "lambda_gam", "beta_sampl"), collapse = FALSE)
-
 out <- as.matrix(as.mcmc.list(mod), chains = T)
 
-# saveRDS(out, outpath)
+saveRDS(out, outpath)
+
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PLOT OUTPUT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+### Occupied cells -------------------------------------------------------------
 
 zzz <- out[, grep("z\\[", colnames(out))]
 zz <- array(NA, dim = c(nrow(zzz), ncol(zzz)/nperiod, nperiod))
@@ -150,32 +162,43 @@ for(t in 1:nperiod){
 }
 z <- apply(zz, c(2,3), mean)
 
+rm("zzz", "zz")
+
+z.df <- data.frame(grid.cell = rep(L93_grid$grid.cell, nperiod),
+                     meanz = c(z[, 1:nperiod]),
+                     period = rep(unique(po.dat$period), each = nrow(z))) %>%
+  left_join(L93_grid, .)
+
+z.df$z.occupied <- ifelse(z.df$meanz > 0.25, "OCCUPIED", "UNOCCUPIED")
+
+### Lambda -------------------------------------------------------------
+
 lll <- out[, grep("lambda\\[", colnames(out))]
 ll <- array(NA, dim = c(nrow(lll), ncol(lll)/nperiod, nperiod))
 for(t in 1:nperiod){
   ll[,,t] <- lll[1:nrow(lll), ((t-1) * ncol(lll) / nperiod + 1):(t*ncol(lll)/nperiod)]
 }
-lam <- apply(ll, c(2,3), mean)
+l <- apply(ll, c(2,3), mean)
 
-rm("zzz", "zz", "lll", "ll")
+rm("lll", "ll")
 
-z.df <- data.frame(grid.cell = rep(L93_grid$grid.cell, nperiod),
-                     meanz = c(z[, 1:nperiod]),
-                     period = rep(unique(po.dat$period), each = nrow(z))) %>%
-  left_join(L93_grid.sp, .)
+lambda.df <- data.frame(grid.cell = rep(L93_grid$grid.cell, nperiod),
+                   lambda = c(l[, 1:nperiod]),
+                   period = rep(unique(po.dat$period), each = nrow(l))) %>%
+  mutate(psi = 1 - exp(-lambda)) %>%
+  left_join(L93_grid, .)
 
-z.df$z.occupied <- ifelse(z.df$meanz > 0.25, "OCCUPIED", "UNOCCUPIED")
+### Plot -----------------------------------------------------------------------
 
 otterDat.toplot <- otterDat%>%
   filter(PNA.protocole|as.logical(presence)) %>% 
   mutate(dataType = ifelse(PNA.protocole&as.logical(presence), "PNA presence",
                            ifelse(PNA.protocole, "PNA absence", "presence Opportuniste")))
 
-ggplot(map)+
-  geom_sf()+
+ggplot()+
   geom_sf(data = z.df, aes(fill = z.occupied), alpha = 0.85) +
   geom_sf(data = otterDat.toplot, aes(color = dataType), alpha = 0.5, size = .6)+
   scale_color_manual(values = c("red", "blue", "black"))+
-  scale_fill_manual(values = c('orange','white')) + 
+  scale_fill_manual(values = c("orange", "white"))+
   facet_wrap(~paste0(period*tmp.res, " - ", period*tmp.res+tmp.res-1))+
   theme_bw()
