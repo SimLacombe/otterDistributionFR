@@ -52,21 +52,25 @@ sampl.eff <- dat %>%
   st_as_sf(coords = centroid, crs = 2154)
 
 circle.list <- foreach(i = 1:nrow(sampl.eff))%do%{
-  rad <- quantile(st_distance(dat[c(dat$observer == sampl.eff$observer[i]),], sampl.eff$centroid[i]), 0.5)
+  rad <- quantile(st_distance(dat[c(dat$observer == sampl.eff$observer[i]),], sampl.eff$centroid[i]), 0.75)
   st_coordinates(sampl.eff$centroid[i] + 
     lapply(seq(0, 2*pi, length.out = 100), FUN = function(x){as.numeric(rad) * c(cos(x), sin(x))}))
 }
 
-polygon.list <- lapply(circle.list, funcCtion(mat) {
+polygon.list <- lapply(circle.list, function(mat){
   st_polygon(list(mat))
 })
 
 sampl.eff$homerange <- st_sfc(polygon.list, crs = 2154)
 st_geometry(sampl.eff) <- sampl.eff$homerange
 
+dat$sampl.eff <- sapply(st_intersects(dat, sampl.eff$homerange), length)
+table(dat$sampl.eff)
+mean(dat$sampl.eff)
+
 rivers <- read_sf("data/CoursEau_53_Bretagne") %>%
   st_zm %>%
-  filter(Classe < 6)
+  filter(Classe < 4)
 
 ggplot(grid) +
   geom_sf() +
@@ -76,3 +80,4 @@ ggplot(grid) +
   geom_sf(data = dat %>% filter(observer != "autre"), aes(col =  paste0(observer, " (n = ", score.obs, ")")), alpha = 0.5) +
   scale_color_discrete(name = "")+
   theme_bw()
+
