@@ -6,12 +6,17 @@ library(LaplacesDemon)
 library(runjags)
 library(rjags)
 library(coda)
+library(mgcv)
 
 rm(list = ls())
 
-regions = c("93", "27", "76", "84")
+# regions = c("11", "32", "75", "28", "52", "24", "44", "93", "53", "27", "76", "84")
+# 11 : Ile de France, 32 : Hauts de France, 75: Nouvelle Aquitaine, 28: Normandie,
+# 52 : Pays de la Loire, 24 : Centre Val de Loire, 44 : Grand Est, 93 : PACA,
+# 53 : Bretagne, 27 : Bourgogne Franche-comté, 76 : Occitanie, 84 : Auvergne Rhône-Alpes
+
+regions = c("11", "32", "75", "28", "52", "24", "44", "93", "53", "27", "76", "84")
 tmp.res = 4 #years
-outpath = paste0("outMod/", Sys.Date(), "_", "reg",paste(regions, collapse = "."),"_res", tmp.res,"yrs", ".rds")
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA AND COVS ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Load data ------------------------------------------------------------------
@@ -103,7 +108,7 @@ data.list <- list(cell_area = L93_grid$logArea,
                   nspline = length(gamDat$jags.data$zero),
                   po.idxs = po.idxs,
                   pa.idxs = pa.idxs,
-                  x_lam =  matrix(L93_grid$intercept, npixel, 1),
+                  x_latent =  matrix(L93_grid$intercept, npixel, 1),
                   x_thin = matrix(L93_grid$intercept, npixel, 1),
                   x_rho =  matrix(L93_grid$intercept, npixel, 1),
                   # sampl_eff = as.matrix(L93_grid[, 2:5]),
@@ -135,8 +140,27 @@ THIN = 1
   
 ### Call jags ------------------------------------------------------------------
 
-mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
-                monitor = c("z", "lambda", "beta_lam", "beta_rho", "beta_thin", "b", "lambda_gam"),
+## Integrated Species Distribution Model (PA + PO) ##
+
+# MOD <- "ISDM"
+# mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
+#                 monitor = c("z", "psi", "beta_latent", "beta_rho", "beta_thin", "b", "lambda_gam"),
+#                 data = data.list,
+#                 inits = inits,
+#                 n.chains = N.CHAINS,
+#                 adapt = ADAPT,
+#                 burnin = BURNIN,
+#                 sample = SAMPLE,
+#                 thin = THIN,
+#                 summarise = TRUE,
+#                 plots = TRUE,
+#                 method = "parallel")
+
+## Occupancy Model (PA) ##
+
+MOD <- "occu"
+mod <- run.jags(model = "JAGS/occu.R",
+                monitor = c("z","psi", "beta_latent", "beta_rho", "b", "lambda_gam"),
                 data = data.list,
                 inits = inits,
                 n.chains = N.CHAINS,
@@ -150,6 +174,7 @@ mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
 
 out <- as.matrix(as.mcmc.list(mod), chains = T)
 
+outpath <- paste0("outMod/", paste(Sys.Date(), MOD, paste(regions, collapse = "."), tmp.res, sep = "_"), "yrs.rds")
 saveRDS(out, outpath)
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PLOT OUTPUT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
@@ -171,22 +196,21 @@ z.df <- data.frame(grid.cell = rep(L93_grid$grid.cell, nperiod),
 
 z.df$z.occupied <- ifelse(z.df$meanz > 0.25, "OCCUPIED", "UNOCCUPIED")
 
-### Lambda -------------------------------------------------------------
+### Psi ------------------------------------------------------------------------
 
-lll <- out[, grep("lambda\\[", colnames(out))]
-ll <- array(NA, dim = c(nrow(lll), ncol(lll)/nperiod, nperiod))
-for(t in 1:nperiod){
-  ll[,,t] <- lll[1:nrow(lll), ((t-1) * ncol(lll) / nperiod + 1):(t*ncol(lll)/nperiod)]
-}
-l <- apply(ll, c(2,3), mean)
-
-rm("lll", "ll")
-
-lambda.df <- data.frame(grid.cell = rep(L93_grid$grid.cell, nperiod),
-                   lambda = c(l[, 1:nperiod]),
-                   period = rep(unique(po.dat$period), each = nrow(l))) %>%
-  mutate(psi = 1 - exp(-lambda)) %>%
-  left_join(L93_grid, .)
+# ppp <- out[, grep("psi\\[", colnames(out))]
+# pp <- array(NA, dim = c(nrow(ppp), ncol(ppp)/nperiod, nperiod))
+# for(t in 1:nperiod){
+#   pp[,,t] <- ppp[1:nrow(ppp), ((t-1) * ncol(ppp) / nperiod + 1):(t*ncol(ppp)/nperiod)]
+# }
+# p <- apply(pp, c(2,3), mean)
+# 
+# rm("ppp", "pp")
+# 
+# psi.df <- data.frame(grid.cell = rep(L93_grid$grid.cell, nperiod),
+#                    psi = c(p[, 1:nperiod]),
+#                    period = rep(unique(po.dat$period), each = nrow(p))) %>%
+#   left_join(L93_grid, .)
 
 ### Plot -----------------------------------------------------------------------
 

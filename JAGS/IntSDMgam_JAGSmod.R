@@ -4,7 +4,7 @@
 #   npo: number of presence-only datapoints
 #   nsite: number of presence-absence sites
 #   K: number of secondary sampling occasions for each presence-absence site
-#   x_lam: latent state covariates
+#   x_latent: latent state covariates
 #   x_thin: presence-only detection covariates
 #   x_rho: presence-absence detection covariates
 #   ncov_lam: number of covariates for lambda
@@ -31,7 +31,7 @@ model{
   ## LATENT MODEL ## 
   for(t in 1:nyear){
     for(pixel in 1:npixel){
-      log(lambda[pixel, t]) <- inprod(x_lam[pixel,], beta_lam) + inprod(x_gam[pixel, ], b[, t]) + cell_area[pixel]
+      log(lambda[pixel, t]) <- inprod(x_latent[pixel,], beta_latent) + inprod(x_gam[pixel, ], b[, t]) + cell_area[pixel]
       z[pixel, t] ~ dbern(1 - exp(-lambda[pixel, t]))
     } 
   }
@@ -79,7 +79,7 @@ model{
   
   ## PRIORS ##
   for(cov in 1:ncov_lam){
-    beta_lam[cov] ~ dnorm(0, 0.01)
+    beta_latent[cov] ~ dnorm(0, 0.01)
   }
   for(cov in 1:ncov_thin){
     beta_thin[cov] ~ dlogis(0, 1)
