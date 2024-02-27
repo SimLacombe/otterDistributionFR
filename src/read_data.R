@@ -3,11 +3,10 @@ library(lubridate)
 library(foreach)
 library(sf)
 library(concom)
-# 
-# rm(list = ls())
-# 
-# source("src/utility_functions.R")
-# 
+
+
+rm(list = ls())
+
 # ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CREATE GRID ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ### 
 # 
 # map_FR <- read_sf("data/regions-20180101-shp/") %>%
@@ -71,6 +70,8 @@ map_FR <- readRDS("data/map_fr.rds")%>%
 
 ### Remove redundant observations ----------------------------------------------
 
+# source("src/utility_functions.R")
+# 
 # thr.space = 500
 # thr.time = 2
 # 
