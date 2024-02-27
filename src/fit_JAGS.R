@@ -125,7 +125,7 @@ data.list <- list(cell_area = L93_grid$logArea,
                   zero = gamDat$jags.data$zero,
                   cste = 1000)
 
-source("src/jags_ini.R")
+source("JAGS/jags_ini.R")
 inits <- foreach(i = 1:4)%do%{my_inits(i)}
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN MODEL ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
