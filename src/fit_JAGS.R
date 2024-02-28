@@ -15,8 +15,8 @@ rm(list = ls())
 # 52 : Pays de la Loire, 24 : Centre Val de Loire, 44 : Grand Est, 93 : PACA,
 # 53 : Bretagne, 27 : Bourgogne Franche-comté, 76 : Occitanie, 84 : Auvergne Rhône-Alpes
 
-regions = c("11", "32", "75", "28", "52", "24", "44", "93", "53", "27", "76", "84")
-tmp.res = 4 #years
+regions = c("75", "28", "52", "24", "93", "53", "27", "76", "84")
+tmp.res = 24 #years
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA AND COVS ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Load data ------------------------------------------------------------------
@@ -43,7 +43,8 @@ L93_grid$logArea <- log(as.numeric(st_area(L93_grid))/1000**2)
 
 ### Get primary period ---------------------------------------------------------
 
-otterDat$period <- otterDat$year %/% tmp.res
+# otterDat$period <- otterDat$year %/% tmp.res
+otterDat$period <- 1
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~ FORMAT DATA FOR JAGS ~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Presence-Absence data ------------------------------------------------------
@@ -80,6 +81,8 @@ po.idxs <- c(0, cumsum(npo))
 
 ### GAM Data -------------------------------------------------------------------
 
+NSPLINES = 20
+  
 jags.file <- "JAGS/test.jags"
 
 tmpDat <- L93_grid %>% 
@@ -90,7 +93,7 @@ tmpDat <- L93_grid %>%
 
 names(tmpDat) <- c("y", "E", "N")
   
-gamDat <- jagam(y ~ s(E,N, k = 10, bs = "ds", m = c(1,0.5)),
+gamDat <- jagam(y ~ s(E,N, k = NSPLINES, bs = "ds", m = c(1,0.5)),
                  data = tmpDat, file = jags.file, 
                  family = "binomial")
 
@@ -108,7 +111,7 @@ data.list <- list(cell_area = L93_grid$logArea,
                   nspline = length(gamDat$jags.data$zero),
                   po.idxs = po.idxs,
                   pa.idxs = pa.idxs,
-                  x_latent =  matrix(L93_grid$intercept, npixel, 1),
+                  x_latent =  matrix(0, npixel, 1),
                   x_thin = matrix(L93_grid$intercept, npixel, 1),
                   x_rho =  matrix(L93_grid$intercept, npixel, 1),
                   # sampl_eff = as.matrix(L93_grid[, 2:5]),
@@ -142,25 +145,9 @@ THIN = 1
 
 ## Integrated Species Distribution Model (PA + PO) ##
 
-# MOD <- "ISDM"
-# mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
-#                 monitor = c("z", "psi", "beta_latent", "beta_rho", "beta_thin", "b", "lambda_gam"),
-#                 data = data.list,
-#                 inits = inits,
-#                 n.chains = N.CHAINS,
-#                 adapt = ADAPT,
-#                 burnin = BURNIN,
-#                 sample = SAMPLE,
-#                 thin = THIN,
-#                 summarise = TRUE,
-#                 plots = TRUE,
-#                 method = "parallel")
-
-## Occupancy Model (PA) ##
-
-MOD <- "occu"
-mod <- run.jags(model = "JAGS/occu.R",
-                monitor = c("z","psi", "beta_latent", "beta_rho", "b", "lambda_gam"),
+MOD <- "ISDM"
+mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
+                monitor = c("z", "psi", "beta_latent", "beta_rho", "beta_thin", "b", "lambda_gam"),
                 data = data.list,
                 inits = inits,
                 n.chains = N.CHAINS,
@@ -171,6 +158,22 @@ mod <- run.jags(model = "JAGS/occu.R",
                 summarise = TRUE,
                 plots = TRUE,
                 method = "parallel")
+
+## Occupancy Model (PA) ##
+
+# MOD <- "occu"
+# mod <- run.jags(model = "JAGS/occu.R",
+#                 monitor = c("z","psi", "beta_latent", "beta_rho", "b", "lambda_gam"),
+#                 data = data.list,
+#                 inits = inits,
+#                 n.chains = N.CHAINS,
+#                 adapt = ADAPT,
+#                 burnin = BURNIN,
+#                 sample = SAMPLE,
+#                 thin = THIN,
+#                 summarise = TRUE,
+#                 plots = TRUE,
+#                 method = "parallel")
 
 out <- as.matrix(as.mcmc.list(mod), chains = T)
 
