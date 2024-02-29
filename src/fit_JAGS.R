@@ -15,8 +15,8 @@ rm(list = ls())
 # 52 : Pays de la Loire, 24 : Centre Val de Loire, 44 : Grand Est, 93 : PACA,
 # 53 : Bretagne, 27 : Bourgogne Franche-comté, 76 : Occitanie, 84 : Auvergne Rhône-Alpes
 
-regions = c("75", "28", "52", "24", "93", "53", "27", "76", "84")
-tmp.res = 24 #years
+regions = c("28", "53", "52")
+tmp.res = 4 #years
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA AND COVS ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Load data ------------------------------------------------------------------
@@ -43,8 +43,8 @@ L93_grid$logArea <- log(as.numeric(st_area(L93_grid))/1000**2)
 
 ### Get primary period ---------------------------------------------------------
 
-# otterDat$period <- otterDat$year %/% tmp.res
-otterDat$period <- 1
+otterDat$period <- otterDat$year %/% tmp.res
+# otterDat$period <- 1
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~ FORMAT DATA FOR JAGS ~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Presence-Absence data ------------------------------------------------------
