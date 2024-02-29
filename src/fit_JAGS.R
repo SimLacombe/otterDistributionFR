@@ -14,9 +14,13 @@ rm(list = ls())
 # 11 : Ile de France, 32 : Hauts de France, 75: Nouvelle Aquitaine, 28: Normandie,
 # 52 : Pays de la Loire, 24 : Centre Val de Loire, 44 : Grand Est, 93 : PACA,
 # 53 : Bretagne, 27 : Bourgogne Franche-comté, 76 : Occitanie, 84 : Auvergne Rhône-Alpes
+ 
+# Bretagne - Pays de la Loire - Normandie : 
+# regions = c("28", "53", "52")
 
-regions = c("28", "53", "52")
-tmp.res = 4 #years
+regions = c("11", "32", "75", "28", "52", "24", "44", "93", "53", "27", "76", "84")
+
+tmp.res = 2 #years
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA AND COVS ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Load data ------------------------------------------------------------------
@@ -201,19 +205,19 @@ z.df$z.occupied <- ifelse(z.df$meanz > 0.25, "OCCUPIED", "UNOCCUPIED")
 
 ### Psi ------------------------------------------------------------------------
 
-# ppp <- out[, grep("psi\\[", colnames(out))]
-# pp <- array(NA, dim = c(nrow(ppp), ncol(ppp)/nperiod, nperiod))
-# for(t in 1:nperiod){
-#   pp[,,t] <- ppp[1:nrow(ppp), ((t-1) * ncol(ppp) / nperiod + 1):(t*ncol(ppp)/nperiod)]
-# }
-# p <- apply(pp, c(2,3), mean)
-# 
-# rm("ppp", "pp")
-# 
-# psi.df <- data.frame(grid.cell = rep(L93_grid$grid.cell, nperiod),
-#                    psi = c(p[, 1:nperiod]),
-#                    period = rep(unique(po.dat$period), each = nrow(p))) %>%
-#   left_join(L93_grid, .)
+lll <- out[, grep("psi\\[", colnames(out))]
+ll <- array(NA, dim = c(nrow(lll), ncol(lll)/nperiod, nperiod))
+for(t in 1:nperiod){
+  ll[,,t] <- lll[1:nrow(lll), ((t-1) * ncol(lll) / nperiod + 1):(t*ncol(lll)/nperiod)]
+}
+l <- apply(ll, c(2,3), mean)
+
+rm("lll", "ll")
+
+latent.df <- data.frame(grid.cell = rep(L93_grid$grid.cell, nperiod),
+                   psi = c(l[, 1:nperiod]),
+                   period = rep(unique(po.dat$period), each = nrow(l))) %>%
+  left_join(L93_grid, .)
 
 ### Plot -----------------------------------------------------------------------
 
@@ -223,9 +227,17 @@ otterDat.toplot <- otterDat%>%
                            ifelse(PNA.protocole, "PNA absence", "presence Opportuniste")))
 
 ggplot()+
-  geom_sf(data = z.df, aes(fill = z.occupied), alpha = 0.85) +
-  geom_sf(data = otterDat.toplot, aes(color = dataType), alpha = 0.5, size = .6)+
+  geom_sf(data = latent.df, aes(fill = psi), alpha = .85) +
+  geom_sf(data = otterDat.toplot, aes(color = dataType), alpha = .5, size = .6)+
   scale_color_manual(values = c("red", "blue", "black"))+
-  scale_fill_manual(values = c("orange", "white"))+
+  scale_fill_gradient2(low = "white", mid = "orange", high = "darkred", midpoint = .5) +
+  facet_wrap(~paste0(period*tmp.res, " - ", period*tmp.res+tmp.res-1))+
+  theme_bw()
+
+ggplot()+
+  geom_sf(data = z.df, aes(fill = z.occupied), alpha = .85) +
+  geom_sf(data = otterDat.toplot, aes(color = dataType), alpha = .5, size = .6)+
+  scale_color_manual(values = c("red", "blue", "black"))+
+  scale_fill_manual(values = c("orange", "white")) +
   facet_wrap(~paste0(period*tmp.res, " - ", period*tmp.res+tmp.res-1))+
   theme_bw()

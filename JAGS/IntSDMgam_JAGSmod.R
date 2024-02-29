@@ -32,7 +32,8 @@ model{
   for(t in 1:nyear){
     for(pixel in 1:npixel){
       log(lambda[pixel, t]) <- inprod(x_latent[pixel,], beta_latent) + inprod(x_gam[pixel, ], b[, t]) + cell_area[pixel]
-      z[pixel, t] ~ dbern(1 - exp(-lambda[pixel, t]))
+      psi[pixel, t] <- 1 - exp(-lambda[pixel,t])
+      z[pixel, t] ~ dbern(psi[pixel, t])
     } 
   }
 
