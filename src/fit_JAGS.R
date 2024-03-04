@@ -18,6 +18,9 @@ rm(list = ls())
 # Bretagne - Pays de la Loire - Normandie : 
 # regions = c("28", "53", "52")
 
+# BFC - AuRA - PACA - Occitanie : 
+# regions = c("27", "84", "93", "76")
+
 regions = c("11", "32", "75", "28", "52", "24", "44", "93", "53", "27", "76", "84")
 
 tmp.res = 2 #years
@@ -234,7 +237,7 @@ ggplot()+
   facet_wrap(~paste0(period*tmp.res, " - ", period*tmp.res+tmp.res-1))+
   theme_bw()
 
-ggplot()+
+ ggplot()+
   geom_sf(data = z.df, aes(fill = z.occupied), alpha = .85) +
   geom_sf(data = otterDat.toplot, aes(color = dataType), alpha = .5, size = .6)+
   scale_color_manual(values = c("red", "blue", "black"))+
