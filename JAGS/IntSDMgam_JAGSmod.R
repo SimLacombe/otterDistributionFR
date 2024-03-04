@@ -61,12 +61,12 @@ model{
   ## LINEAR PREDICTORS
   for(pixel in 1:npixel){
     for(t in 1:nyear){
-      # logit(thin_prob[pixel, t]) <- inprod(x_thin[pixel,], beta_thin) + inprod(sampl_eff[pixel, t], beta_sampl)
-      logit(thin_prob[pixel, t]) <- inprod(x_thin[pixel,], beta_thin)
+      logit(thin_prob[pixel, t]) <- inprod(x_thin[pixel,], beta_thin) + beta_region[region[pixel]]
     }
     logit(rho[pixel]) <-inprod(x_rho[pixel, ], beta_rho)
   }
   
+  ## GAM ##
   K1 <- S1[1:(nspline-1),1:(nspline-1)] * lambda_gam
   
   b[1, 1] ~ dnorm(-4.6, 0.75)
@@ -76,6 +76,11 @@ model{
     for(yr in 2:nyear){
       b[jj,yr] ~ dnorm(b[jj,yr-1], tau_gam)
     }
+  }
+  
+  # RANDOM EFFECTS ##
+  for(reg in 1:nregion){
+    beta_region[reg] ~ dnorm(0, 1/(sigma_region*sigma_region))
   }
   
   ## PRIORS ##
@@ -88,8 +93,9 @@ model{
   for(cov in 1:ncov_rho){
     beta_rho[cov] ~ dlogis(0, 1)
   }
-  # beta_sampl ~ dlogis(0,1)
 
+  sigma_region ~ dunif(0,100)
+  
   lambda_gam ~ dgamma(.05,.005)
   tau_gam ~ dgamma(1,1)
 }
