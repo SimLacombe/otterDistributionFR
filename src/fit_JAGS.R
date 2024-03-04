@@ -10,18 +10,9 @@ library(mgcv)
 
 rm(list = ls())
 
-# regions = c("11", "32", "75", "28", "52", "24", "44", "93", "53", "27", "76", "84")
-# 11 : Ile de France, 32 : Hauts de France, 75: Nouvelle Aquitaine, 28: Normandie,
-# 52 : Pays de la Loire, 24 : Centre Val de Loire, 44 : Grand Est, 93 : PACA,
-# 53 : Bretagne, 27 : Bourgogne Franche-comté, 76 : Occitanie, 84 : Auvergne Rhône-Alpes
- 
-# Bretagne - Pays de la Loire - Normandie : 
-# regions = c("28", "53", "52")
+# regions = c("Aq", "Au", "Bo", "Br", "Cvl", "FC", "Li", "No", "Oc", "PACA", "PdL", "RA", "noDat")
 
-# BFC - AuRA - PACA - Occitanie : 
-# regions = c("27", "84", "93", "76")
-
-regions = c("11", "32", "75", "28", "52", "24", "44", "93", "53", "27", "76", "84")
+regions = c("Au", "Bo", "FC", "Li", "Oc", "PACA", "RA")
 
 tmp.res = 2 #years
 
@@ -40,8 +31,8 @@ L93_grid <- readRDS(grid.filename) %>%
 
 ### Filter the region of interest ----------------------------------------------
 
-otterDat <- filter(otterDat, code_insee %in% regions)
-L93_grid <- filter(L93_grid, code_insee %in% regions)
+otterDat <- filter(otterDat, data_region %in% regions)
+L93_grid <- filter(L93_grid, data_region %in% regions)
 
 ### Get offset and spatial covariates ------------------------------------------
 
@@ -116,12 +107,13 @@ data.list <- list(cell_area = L93_grid$logArea,
                   nyear = nperiod,
                   npo = npo,
                   nspline = length(gamDat$jags.data$zero),
+                  nregion = length(unique(L93_grid$data_region)),
                   po.idxs = po.idxs,
                   pa.idxs = pa.idxs,
                   x_latent =  matrix(0, npixel, 1),
                   x_thin = matrix(L93_grid$intercept, npixel, 1),
                   x_rho =  matrix(L93_grid$intercept, npixel, 1),
-                  # sampl_eff = as.matrix(L93_grid[, 2:5]),
+                  region = as.numeric(as.factor(L93_grid$data_region)),
                   x_gam = gamDat$jags.data$X,
                   S1 = gamDat$jags.data$S1,
                   ncov_lam = 1,

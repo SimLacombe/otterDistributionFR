@@ -4,15 +4,30 @@ library(foreach)
 library(sf)
 library(concom)
 
-
 rm(list = ls())
 
 # ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CREATE GRID ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ### 
 
-map_FR <- read_sf("data/regions-20180101-shp/") %>%
-  filter(!code_insee %in% c("04", "94", "02", "01", "03", "06")) %>%
+map_FR <- read_sf("data/regions-20140306-5m-shp/") %>%
+  filter(code_insee %in% c("42", "72", "83", "25", "26", "53",
+                            "24", "21", "43", "23", "11", "91",
+                            "74", "41", "73", "31", "52", "22", 
+                            "54", "93", "82")) %>%
   rmapshaper::ms_simplify() %>%
   st_transform(crs = 2154)
+
+insee_to_dataRegion <- data.frame(code_insee = c("42", "72", "83", "25", "26", "53",
+                                                 "24", "21", "43", "23", "11", "91",
+                                                 "74", "41", "73", "31", "52", "22", 
+                                                 "54", "93", "82"),
+                                  data_region = c("noDat", "Aq", "Au", "No", "Bo", "Br", "Cvl",
+                                                  "noDat", "FC", "No", "noDat", "Oc", "Li", "noDat", "Oc",
+                                                  "noDat", "PdL", "noDat", "Aq", "PACA", "RA"))
+
+map_FR <- map_FR %>% 
+  left_join(insee_to_dataRegion, by = "code_insee") %>%
+  group_by(data_region) %>%
+  summarize()
 
 grid <- st_make_grid(map_FR, crs = 2154,
                      cellsize = c(10000,10000),
@@ -25,8 +40,8 @@ grid <- cbind(grid, st_coordinates(st_centroid(grid))) %>%
   mutate(grid.cell = ifelse(lon.l93 >= 1000000,
                            paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
                            paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3)))) %>%
-  st_join(map_FR[, "code_insee"], largest = TRUE) %>%
-  filter(!is.na(code_insee))
+  st_join(map_FR[, "data_region"], largest = TRUE) %>%
+  filter(!is.na(data_region))
 
 grid2 <- grid %>%
   st_intersection(st_union(map_FR))
@@ -66,7 +81,7 @@ otter.dat <- st_as_sf(otter.dat, coords = c("lon.l93", "lat.l93"), crs = 2154)
 
 ### Get Administrative regions -------------------------------------------------
 
-otter.dat <-  st_join(otter.dat, grid[, "code_insee"])
+otter.dat <-  st_join(otter.dat, grid[, "data_region"])
 
 ### Remove redundant observations ----------------------------------------------
 
