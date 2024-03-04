@@ -24,7 +24,7 @@ dat <- dat %>%
   mutate(date = as.Date(DATE),
          year = year(date),
          presence = sign(TOTAL_COUNT),
-         data.provider = "LPO",
+         data.provider = "LPO-PACA",
          loc = paste(MUNICIPALITY, PLACE, sep = ".")) %>%
   rename(lon.l93 = COORD_LON_L93,
          lat.l93 = COORD_LAT_L93,

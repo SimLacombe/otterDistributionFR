@@ -13,7 +13,7 @@ dat <- dat %>%
   mutate(year = year(date),
          loc = place,
          presence = as.numeric(is_present),
-         data.provider = "LPO",
+         data.provider = "LPO-AuRA",
          grid.cell = ifelse(lon.l93 >= 1000000,
                             paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))

@@ -10,7 +10,7 @@ dat <- dat %>%
          date = as.Date(Date, format = "%d/%m/%Y"),
          loc = NA,
          presence = sign(Nombre),
-         data.provider = "LPO",
+         data.provider = "LPO-BFC",
          grid.cell = Maille,
          year = year(date),
          lon.l93 = NA,

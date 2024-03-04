@@ -21,7 +21,7 @@ dat <- dat %>%
 
 dat2 <- read.csv(dat2.filename, sep = ";", header = T) %>%
   mutate(PNA.protocole = TRUE,
-         data.provider = "LPO",
+         data.provider = "LPO-Occitanie",
          lon.l93 = NA,
          lat.l93 = NA) %>%
   select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
