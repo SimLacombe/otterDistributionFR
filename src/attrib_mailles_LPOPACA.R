@@ -15,14 +15,14 @@ otterDat <- readRDS(data.filename) %>%
   st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)
 
 otterDat <- otterDat %>% 
-  filter(region == "PACA")
+  filter(data_region == "PACA")
 
 
 map.filename <- "data/map_fr.rds"
 grid.filename <- "data/L9310x10grid.rds"
 
 map <- readRDS(map.filename) %>%
-  filter(code_insee == "93")
+  filter(data_region == "PACA")
 
 L93_grid <- readRDS(grid.filename) %>%
   st_intersection(map) %>%

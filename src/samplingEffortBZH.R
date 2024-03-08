@@ -8,7 +8,7 @@ rm(list = ls())
 dat.filename <- "data/PNA-DATA/Bretagne-GMB/Data_Lutra_GMB.csv"
 
 grid <- readRDS("data/L9310x10grid.rds")%>% 
-  filter(code_insee == 53) %>%
+  filter(data_region == "Br") %>%
   st_as_sf(crs = 2154)
 
 dat <- read.csv(dat.filename, sep = ";") 
