@@ -19,8 +19,9 @@ dat1 <- dat1%>%
          grid.cell = Maille) %>%
   select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
+og.time <- min(paste(dat2$`Année,N,24,15`, dat2$`Mois,N,24,15`, "24", sep = "-"))
 dat2 <- dat2%>%
-  mutate(date = NA,
+  mutate(date = as.Date(dat2$`Date,D`-min(`Date,D`), origin = og.time),
          year = `Année,N,24,15`,
          presence = sign(`Nombre,N,24,15`),
          data.provider = "GMHL",

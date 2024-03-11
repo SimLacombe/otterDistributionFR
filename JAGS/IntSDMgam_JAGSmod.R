@@ -61,7 +61,7 @@ model{
   ## LINEAR PREDICTORS
   for(pixel in 1:npixel){
     for(t in 1:nyear){
-      logit(thin_prob[pixel, t]) <- inprod(x_thin[pixel,], beta_thin) + beta_region[region[pixel]]
+      logit(thin_prob[pixel, t]) <- inprod(x_thin[pixel,], beta_thin) + beta_region[region[pixel], t]
     }
     logit(rho[pixel]) <-inprod(x_rho[pixel, ], beta_rho)
   }
@@ -80,7 +80,9 @@ model{
   
   # RANDOM EFFECTS ##
   for(reg in 1:nregion){
-    beta_region[reg] ~ dnorm(0, 1/(sigma_region*sigma_region))
+    for(t in 1:nyear){
+      beta_region[reg, t] ~ dnorm(0, 1/(sigma_region*sigma_region))
+    }
   }
   
   ## PRIORS ##
