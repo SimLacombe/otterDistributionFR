@@ -16,12 +16,14 @@ dat <- dat %>%
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(COMMENT, "\\dKM")))*1000, tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(COMMENT, "\\d.\\d KM")))*100, tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(COMMENT, "\\d KM")))*1000, tr_len))%>%
-  mutate(PNA.protocole = grepl("E\\d\\d\\dN\\d\\d\\d", COMMENT)|grepl("E\\d\\dN\\d\\d\\d", COMMENT)|
+  mutate(PA = grepl("E\\d\\d\\dN\\d\\d\\d", COMMENT)|grepl("E\\d\\dN\\d\\d\\d", COMMENT)|
            grepl("EO\\d\\dN\\d\\d\\d", COMMENT)|grepl("EN\\d\\d\\dN\\d\\d\\d", PRIVATE_COMMENT)|
            grepl("E\\d\\d\\dN\\d\\d\\d", PRIVATE_COMMENT)|grepl("PNA", COMMENT),
-         PNA.protocole = PNA.protocole|tr_len >= 300,
-         PNA.protocole = ifelse(is.na(PNA.protocole), FALSE, PNA.protocole)) %>%
-  mutate(date = as.Date(DATE),
+         PA = PA|tr_len >= 300,
+         PA = ifelse(is.na(PA), FALSE, PA)) %>%
+  mutate(PA.protocole = ifelse(PA, "transect", NA),
+         collision = FALSE,
+         date = as.Date(DATE),
          year = year(date),
          presence = sign(TOTAL_COUNT),
          data.provider = "LPO-PACA",
@@ -29,4 +31,4 @@ dat <- dat %>%
   rename(lon.l93 = COORD_LON_L93,
          lat.l93 = COORD_LAT_L93,
          grid.cell = GRID_NAME) %>%
-  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)

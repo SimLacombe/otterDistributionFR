@@ -12,7 +12,7 @@ rm(list = ls())
 
 # regions = c("Aq", "Au", "Bo", "Br", "Cvl", "FC", "Li", "No", "Oc", "PACA", "PdL", "RA", "noDat")canc
 
-regions = c("Au", "Bo", "FC", "Li", "Oc", "PACA", "RA")
+regions = c("Au", "Aq","Bo", "FC", "Li", "Oc", "PACA", "RA")
 
 tmp.res = 2 #years
 
@@ -49,10 +49,11 @@ otterDat$period <- otterDat$year %/% tmp.res
 
 pa.dat <- otterDat %>%
   st_drop_geometry() %>%
-  filter(PNA.protocole, grid.cell %in% L93_grid$grid.cell) %>%
-  group_by(period, grid.cell) %>%
+  filter(PA, grid.cell %in% L93_grid$grid.cell) %>%
+  group_by(period, grid.cell, PA.protocole) %>%
   summarize(K = n(),
-            y = sum(presence)) %>%
+            y = sum(presence),
+            protocole = 2 - as.numeric(PA.protocole[1] == "transect")) %>%
   arrange(period)
 
 pa.dat$pixel <- sapply(pa.dat$grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
@@ -65,7 +66,7 @@ pa.idxs <- c(0, cumsum(npa))
 
 po.dat <- otterDat %>%
   st_drop_geometry() %>%
-  filter(!PNA.protocole, as.logical(presence), grid.cell %in% L93_grid$grid.cell) %>%
+  filter(!PA, as.logical(presence), grid.cell %in% L93_grid$grid.cell) %>%
   group_by(period, grid.cell) %>%
   summarize() %>%
   arrange(period)
@@ -121,6 +122,7 @@ data.list <- list(cell_area = L93_grid$logArea,
                   ncov_rho = 1,
                   po_pixel = po.dat$pixel,
                   pa_pixel = pa.dat$pixel,
+                  pa_protocole = pa.dat$protocole,
                   y = pa.dat$y,
                   K = pa.dat$K,
                   ones = po.dat$ones,
@@ -146,7 +148,7 @@ THIN = 1
 
 MOD <- "ISDM"
 mod <- run.jags(model = "JAGS/intSDMgam_JAGSmod.R",
-                monitor = c("z", "beta_region", "beta_latent", "beta_rho", "beta_thin", "b", "lambda_gam"),
+                monitor = c("z", "beta_region", "beta_latent", "beta_rho","beta_rho_point", "beta_thin", "b", "lambda_gam"),
                 data = data.list,
                 inits = inits,
                 n.chains = N.CHAINS,
@@ -237,12 +239,20 @@ beta_reg.df <- data.frame(period = rep(unique(po.dat$period), each = length(uniq
                           beta_reg.sup = sum.beta_reg[3,]) %>% 
   mutate(period = paste0(period*tmp.res, " - ", period*tmp.res+tmp.res-1))
 
+### Protocoles -----------------------------------------------------------------
+
+beta_rho <- out[, grep("beta_rho", colnames(out))]
+
+rho.df <- data.frame(protocole = rep(c("transect", "point"), each = nrow(beta_rho)),
+                     rho = c(invlogit(beta_rho[,1]), invlogit(beta_rho[,1] + beta_rho[,2])))
+
+
 ### Plots ----------------------------------------------------------------------
 
 otterDat.toplot <- otterDat%>%
-  filter(PNA.protocole|as.logical(presence)) %>% 
-  mutate(dataType = ifelse(PNA.protocole&as.logical(presence), "PNA presence",
-                           ifelse(PNA.protocole, "PNA absence", "presence Opportuniste")),
+  filter(PA|as.logical(presence)) %>% 
+  mutate(dataType = ifelse(PA&as.logical(presence), "PNA presence",
+                           ifelse(PA, "PNA absence", "presence Opportuniste")),
          period = paste0(period*tmp.res, " - ", period*tmp.res+tmp.res-1))
 
 ggplot()+
@@ -272,3 +282,11 @@ ggplot()+
    geom_hline(aes(yintercept = 0))+
    theme_bw()+
    facet_wrap(~period)
+
+ 
+ ggplot(rho.df)+
+   geom_violin(aes(x = protocole, y = rho, fill = protocole, group = protocole),
+                   show.legend = F)+
+   geom_hline(aes(yintercept = 0))+
+   theme_bw()
+ 

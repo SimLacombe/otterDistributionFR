@@ -7,9 +7,11 @@ names(dat) <- names(readxl::read_xlsx(dat.filename, n_max = 1))
 
 dat <- dat %>% 
   mutate(COMMENT = toupper(COMMENT))%>%
-  mutate(PNA.protocole = NAME == "Marais Breton"|TRA_NAME == "Marais Breton"|TRA_SURNAME == "Rnrvacherie"|
+  mutate(PA = NAME == "Marais Breton"|TRA_NAME == "Marais Breton"|TRA_SURNAME == "Rnrvacherie"|
            grepl("Rnrvacherie", COMMENT)|grepl("RNNBA", COMMENT)|
            grepl("LOUTRE LITTORAL", COMMENT)|TRA_NAME == "Dupé"|TRA_NAME == "Dupé (lpo)",
+         PA.protocole = ifelse(PA, "transect", NA),
+         collision = (HAS_DEATH_INFO == "Oui"&grepl("ROUT", COMMENT))|grepl("COLLISION", COMMENT)|grepl("ÉCRASÉ", COMMENT)|grepl("PERCUTÉ", COMMENT),
          date = as.Date(DATE),
          year = year(date),
          presence = sign(TOTAL_COUNT),
@@ -18,4 +20,4 @@ dat <- dat %>%
   rename(lon.l93 = COORD_LON_L93,
          lat.l93 = COORD_LAT_L93,
          grid.cell = GRID_NAME) %>%
-  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)

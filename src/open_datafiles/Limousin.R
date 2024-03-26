@@ -12,12 +12,14 @@ dat1 <- dat1%>%
          presence = sign(Nombre),
          region = "Limousin",
          data.provider = "GMHL",
-         PNA.protocole = FALSE,
+         PA = FALSE,
+         PA.protocole = NA,
+         collision = grepl("collision", Remarque),
          loc = paste(Commune, `Lieu-dit`, sep = ".")) %>%
   rename(lon.l93 = `X Lambert93 [m]`,
          lat.l93 = `Y Lambert93 [m]`,
          grid.cell = Maille) %>%
-  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 og.time <- min(paste(dat2$`Année,N,24,15`, dat2$`Mois,N,24,15`, "24", sep = "-"))
 dat2 <- dat2%>%
@@ -25,13 +27,15 @@ dat2 <- dat2%>%
          year = `Année,N,24,15`,
          presence = sign(`Nombre,N,24,15`),
          data.provider = "GMHL",
-         PNA.protocole = TRUE,
+         PA = TRUE,
+         PA.protocole = "transect",
+         collision = FALSE, 
          loc = NA) %>%
   rename(lon.l93 = `X Lambert9,N,24,15`,
          lat.l93 = `Y Lambert9,N,24,15`) %>%
   mutate(grid.cell = ifelse(lon.l93 >= 1000000,
                             paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))%>%
-  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 dat <- rbind(dat1, dat2)

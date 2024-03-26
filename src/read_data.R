@@ -50,11 +50,11 @@ saveRDS(grid, "data/L9310x10grid_uncropped.rds")
 saveRDS(grid2, "data/L9310x10grid.rds")
 saveRDS(map_FR, "data/map_fr.rds")
 
-# grid <- readRDS("data/L9310x10grid_uncropped.rds")%>% 
+# grid <- readRDS("data/L9310x10grid_uncropped.rds")%>%
 #   st_as_sf(crs = 2154)
-# grid2 <- readRDS("data/L9310x10grid.rds")%>% 
+# grid2 <- readRDS("data/L9310x10grid.rds")%>%
 #   st_as_sf(crs = 2154)
-# map_FR <- readRDS("data/map_fr.rds")%>% 
+# map_FR <- readRDS("data/map_fr.rds")%>%
 #   st_as_sf(crs = 2154)
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
@@ -75,6 +75,12 @@ otter.dat[is.na(otter.dat$lat.l93), c("lon.l93", "lat.l93")] <- otter.dat[is.na(
   left_join(grid[,c("lon.l93", "lat.l93", "grid.cell")], by = "grid.cell") %>%
   select(lon.l93, lat.l93)
 
+## Remove collision data associated to presence-absence ------------------------
+
+otter.dat <- otter.dat %>%
+  mutate(PA = ifelse(collision, FALSE, PA),
+         PA.protocole = ifelse(collision, NA, PA.protocole))
+
 ### To spatial object ----------------------------------------------------------
 
 otter.dat <- st_as_sf(otter.dat, coords = c("lon.l93", "lat.l93"), crs = 2154)
@@ -92,10 +98,10 @@ thr.time = 2
 
 otter.dat.filtered <- filter(otter.dat, year %in% 2009:2023)
 
-otter.dat.filtered.1 <- filter(otter.dat.filtered, !PNA.protocole)
+otter.dat.filtered.1 <- filter(otter.dat.filtered, !PA)
 
 otter.dat.filtered.2 <- otter.dat.filtered %>%
-  filter(PNA.protocole) %>%
+  filter(PA) %>%
   group_by(year, grid.cell) %>%
   mutate(obs = collapse_transects(date, geometry, thr.space, thr.time)) %>%
   group_by(year, grid.cell, obs) %>%
@@ -121,17 +127,17 @@ saveRDS(otter.dat.filtered, "data/otterDatFiltered.rds")
 
 otter.dat.filtered %>%
   st_drop_geometry() %>%
-  filter(PNA.protocole|presence) %>%
+  filter(PA|presence) %>%
   group_by(period = year %/% 4, grid.cell) %>%
-  summarize(cell.status = ifelse(any(PNA.protocole&presence>0), "Présente - protocolé",
-                                 ifelse(any(PNA.protocole > 0),"Non observée - protocolé", 
+  summarize(cell.status = ifelse(any(PA&presence>0), "Présente - protocolé",
+                                 ifelse(any(PA),"Non observée - protocolé", 
                                         "Présente - opportuniste")),
             nsample = n()) %>%
   left_join(grid[,c("geometry", "grid.cell")], by = "grid.cell") %>%
   st_as_sf %>%
   ggplot()+
     geom_sf(data=map_FR)+
-    geom_sf(data = otter.dat.filtered %>% filter(!PNA.protocole&!presence) %>%
+    geom_sf(data = otter.dat.filtered %>% filter(!PA&!presence) %>%
                mutate(period = year %/% 4), alpha = 0.1)+
     geom_sf(aes(fill = cell.status))+
     scale_fill_manual(name = "", values = c("orange", "lightblue", "darkblue"))+

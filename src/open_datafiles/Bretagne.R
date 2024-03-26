@@ -4,17 +4,19 @@ dat.filename <- "data/PNA-DATA/Bretagne-GMB/Data_Lutra_GMB.csv"
 dat <- read.csv(dat.filename, sep = ";") 
 
 dat <- dat %>%
-  mutate(PNA.protocole = jdd_nom %in% c("Données publiques de l'Inventaire Mammifères semi-aquatiques de l'Atlas 2010-14",
+  mutate(PA = jdd_nom %in% c("Données publiques de l'Inventaire Mammifères semi-aquatiques de l'Atlas 2010-14",
                                         "Données privées de l'Inventaire Mammifères semi-aquatiques de l'Atlas 2010-14",
                                         "Données publiques prospections Loutre standardisées 2000-",
                                         "Données privées prospections Loutre standardisées 2000-",
                                         "Données études Loutre GMB"),
          opportuniste = grepl("Données opportunistes", jdd_nom) | grepl("Données faunebretagne", jdd_nom)) %>% 
-  filter(PNA.protocole | opportuniste)
+  filter(PA | opportuniste)
 
 
 dat <- dat %>% 
-  mutate(date = as.Date(date_debut, format = "%d/%m/%Y"),
+  mutate(collision = etat_biologique == "Trouvé mort : impact routier",
+         PA.protocole = ifelse(PA, "transect", NA),
+         date = as.Date(date_debut, format = "%d/%m/%Y"),
          year = year(date),
          presence = as.numeric(statut_observation  == "Présent"),
          data.provider = "GMB") %>%
@@ -32,4 +34,4 @@ dat <- dat %>%
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))
 
 dat <- dat %>%
-  select(data.provider,PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider,PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)

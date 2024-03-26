@@ -54,7 +54,7 @@ model{
   ## PRESENCE-ABSENCE DATA MODEL ##
   for(t in 1:nyear){
     for(pa in (pa.idxs[t]+1):pa.idxs[t+1]){
-      y[pa] ~ dbin(z[pa_pixel[pa], t] * rho[pa_pixel[pa]], K[pa])
+      y[pa] ~ dbin(z[pa_pixel[pa], t] * rho[pa_pixel[pa], pa_protocole[pa]], K[pa])
     }
   }
   
@@ -63,7 +63,8 @@ model{
     for(t in 1:nyear){
       logit(thin_prob[pixel, t]) <- inprod(x_thin[pixel,], beta_thin) + beta_region[region[pixel], t]
     }
-    logit(rho[pixel]) <-inprod(x_rho[pixel, ], beta_rho)
+    logit(rho[pixel, 1]) <-inprod(x_rho[pixel, ], beta_rho)
+    logit(rho[pixel, 2]) <-inprod(x_rho[pixel, ], beta_rho) + beta_rho_point
   }
   
   ## GAM ##
@@ -94,6 +95,7 @@ model{
   }
   for(cov in 1:ncov_rho){
     beta_rho[cov] ~ dlogis(0, 1)
+    beta_rho_point[cov] ~ dlogis(0, 1)
   }
 
   sigma_region ~ dunif(0,100)

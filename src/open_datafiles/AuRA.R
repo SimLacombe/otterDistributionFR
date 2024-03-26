@@ -28,14 +28,17 @@ dat <- dat %>%
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\dKM")))*10000, tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d\\d KM")))*1000, tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d KM")))*1000, tr_len)) %>% 
-  mutate(PNA.protocole = ((grepl("IUCN", comment)|grepl("UICN", comment)|grepl("PROTOCOL", comment_priv)|grepl("PROTOCOL", comment)|grepl("PNA", comment))&!
+  mutate(PA = ((grepl("IUCN", comment)|grepl("UICN", comment)|grepl("PROTOCOL", comment_priv)|grepl("PROTOCOL", comment)|grepl("PNA", comment))&!
                             (grepl("FRAPNA", comment)|grepl("NON PROTOCOL", comment)|grepl("NON PROTOCOL", comment_priv)|
                                grepl("NON-PROTOCOL", comment_priv)|grepl("NON-PROTOCOL", comment))),
-         PNA.protocole = PNA.protocole|tr_len >= 300,
-         PNA.protocole = ifelse(is.na(PNA.protocole), FALSE, PNA.protocole))
+         PA = PA|tr_len >= 300,
+         PA = ifelse(is.na(PA), FALSE, PA),
+         PA.protocole = ifelse(PA, "transect", NA),
+         collision = (grepl("MORT", comment)&(grepl("ROUT", comment)|grepl("NATIONALE", comment)|grepl("ÉCRAS", comment)|grepl("COLLISION", comment)))|
+           (grepl("MORT", comment_priv)&grepl("ROUT", comment_priv)))
 
 dat <- dat%>%
-  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 # QU'est ce que : 
 # * ETUDE PRÉALABLE À LA DÉFINITION DU CONTRAT DE BIODIVERSITÉ DU HAUT-RHÔNE 2011-2015. SYNDICAT DU HAUT-RHÔNE (29),

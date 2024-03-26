@@ -28,17 +28,21 @@ dat1[, c("lon.l93", "lat.l93")] <- dat1 %>%
 dat1 <- dat1%>%
   as.data.frame() %>%
   filter(!is.na(date)&!is.na(presence)) %>% 
-  mutate(PNA.protocole = TRUE, 
+  mutate(PA = TRUE, 
+         PA.protocole = "point",
+         collision = FALSE,
          date = as.Date(date),
          loc = NA,
          data.provider = "GRIFS",
          year = year(date)) %>%
-  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, presence)
+  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, presence)
 
 
 dat2 <- read.csv(dat2.filename, sep = "\t")
 dat2 <- dat2 %>% 
-  mutate(PNA.protocole = FALSE, 
+  mutate(PA.protocole = NA, 
+         PA = FALSE,
+         collision = ProcObserv == "trouvé mort (collision routière)",
          date = as.Date(DateDebut),
          loc = NomCom,
          presence = as.numeric(StatPresen=="présent"),
@@ -48,20 +52,15 @@ dat2 <- dat2 %>%
   rowwise() %>%
   mutate(lon.l93 = as.numeric(strsplit(str_extract(string = GeomWkt, pattern = "(?<=\\().*(?=\\))"), " ")[[1]][1]),
          lat.l93 = as.numeric(strsplit(str_extract(string = GeomWkt, pattern = "(?<=\\().*(?=\\))"), " ")[[1]][2])) %>% 
-  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, presence)
+  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, presence)
 
 dat1.sf <- dat1%>%
   st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)
 dat2.sf <- dat2%>%
   st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)
 
-dat2$distmin <- apply(st_distance(dat1.sf, dat2.sf), 2, min)
-dat2 <- dat2 %>% 
-  filter(distmin > 50000) %>%
-  select(-distmin)
-
 dat <- rbind(dat1, dat2)%>%
   mutate(grid.cell = ifelse(lon.l93 >= 1000000,
                             paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3)))) %>% 
-  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)

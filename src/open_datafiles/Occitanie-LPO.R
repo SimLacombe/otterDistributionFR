@@ -7,7 +7,9 @@ dat <- readxl::read_xlsx(dat.filename)
 names(dat) <- names(readxl::read_xlsx(dat.filename, n_max = 1))
 
 dat <- dat %>% 
-  mutate(PNA.protocole = FALSE,
+  mutate(PA.protocole = NA,
+         PA = FALSE,
+         collision = `Contient des détails mortalité` == "Oui",
          date = as.Date(Date),
          year = year(date),
          presence = sign(Nombre),
@@ -17,13 +19,15 @@ dat <- dat %>%
          lat.l93 = `Y Lambert93 [m]`,
          grid.cell = Maille)
 dat <- dat %>%
-  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 dat2 <- read.csv(dat2.filename, sep = ";", header = T) %>%
-  mutate(PNA.protocole = TRUE,
+  mutate(PA.protocole = "transect",
+         PA = TRUE,
+         collision = FALSE,
          data.provider = "LPO-Occitanie",
          lon.l93 = NA,
          lat.l93 = NA) %>%
-  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 
 dat <- rbind(dat, dat2)

@@ -14,9 +14,11 @@ dat <- dat %>%
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\dKM")))*10000, tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d KM")))*1000, tr_len),
          tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d KM")))*1000, tr_len))%>%
-  mutate(PNA.protocole = grepl("PNA", Remarques)|grepl("PRA", Remarques)|grepl("UICN", Remarques)|grepl("POINT", Remarques),
-         PNA.protocole = PNA.protocole|tr_len >= 300,
-         PNA.protocole = ifelse(is.na(PNA.protocole), FALSE, PNA.protocole))%>%
+  mutate(PA = grepl("PNA", Remarques)|grepl("PRA", Remarques)|grepl("UICN", Remarques)|grepl("POINT", Remarques)|grepl("MAILLE", Remarques),
+         PA = PA|tr_len >= 300,
+         PA = ifelse(is.na(PA), FALSE, PA),
+         PA.protocole = ifelse(PA, "transect", NA),
+         collision = grepl("ÉCRASÉ", Remarques)|grepl("CADAVRE", Remarques))%>%
   mutate(date = as.Date(Date),
          year = year(date),
          presence = sign(Nombre),
@@ -25,5 +27,5 @@ dat <- dat %>%
   rename(lon.l93 = `X Lambert93 [m]`,
          lat.l93 = `Y Lambert93 [m]`,
          grid.cell = Maille) %>%
-  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
 

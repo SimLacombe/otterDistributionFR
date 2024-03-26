@@ -10,7 +10,9 @@ dat$date <- dat$Date
 dat[is.na(dat$date), "date"] <- dat[is.na(dat$date), "DATE_"]
 
 dat <- dat %>% 
-  mutate(PNA.protocole = grepl("LGV", ETUDE)|grepl("Euskadour", ETUDE)|grepl("BPL", ETUDE),
+  mutate(PA = TRUE,
+         PA.protocole = ifelse(grepl("LGV", ETUDE)|grepl("Euskadour", ETUDE)|grepl("BPL", ETUDE), "transect", "point"),
+         collision = FALSE,
          year = year(date),
          presence = as.numeric(PRESENCE_LLU  == "Positif"),
          data.provider = "GREGE",
@@ -24,5 +26,5 @@ dat <- dat %>%
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))
 
 dat <- dat %>%
-  select(data.provider,PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence) 
+  select(data.provider,PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence) 
 

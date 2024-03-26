@@ -11,7 +11,9 @@ dat2 <- readxl::read_xlsx(dat2.filename) %>%
 dat <- rbind(dat1,dat2) 
 
 dat <- dat %>% 
-  mutate(PNA.protocole = TRUE,
+  mutate(PA.protocole = "point",
+         PA = TRUE,
+         collision = `Comportement\r\nN°1` == "2315/Mort par collision avec véhicule", 
          date = as.Date(`Date\r\nobservation`),
          year = year(date),
          presence = as.numeric(`Comportement\r\nN°1` != "0001/Absence d'indice"),
@@ -22,4 +24,4 @@ dat <- dat %>%
   mutate(grid.cell = ifelse(lon.l93 >= 1000000,
                             paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))%>%
-  select(data.provider, PNA.protocole, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
