@@ -1,5 +1,6 @@
 library(tidyverse)
 library(lubridate)
+library(sf)
 
 dat.filename <- "data/PNA-data/PaysdelaLoire-LPOanjou/Copie de Export_données_loutre_SFEPM_CEFE_LPO 24_07_2023.xlsx"
 protocoles <- c("COLL", "CT", "KAYAK", "UICN", "OA", "ENS", "PNR", "N2000", "SBO", "ONCFS", "CLCT", "OPP")
@@ -12,7 +13,7 @@ dat <- dat %>%
          CT = grepl("PIÈGE-PHOTO", Remarques)|grepl("PIÈGE PHOTO", Remarques),
          KAYAK = grepl("CANOÉ", Remarques)|grepl("CANOË", Remarques)|grepl("KAYAK", Remarques),
          UICN = grepl("PNA", Remarques)|grepl("PRA", Remarques)|grepl("UICN", Remarques)|grepl("IUCN", Remarques)|grepl("POINT N", Remarques)|
-           grepl("POINT \\d\\d", Remarques)|grepl("POINT\\d", Remarques)|grepl("POINT DE SUIVI", Remarques)|grepl("MAILLE", Remarques),
+           grepl("POINT \\d", Remarques)|grepl("POINT\\d", Remarques)|grepl("POINT DE SUIVI", Remarques)|grepl("MAILLE", Remarques),
          OA = grepl(" OA", Remarques)|grepl("OUVRAGE", Remarques),
          ENS = grepl("ENS", Remarques)&(grepl("COUASNON", Remarques)|grepl("BAUGÉ", Remarques)),
          PNR = grepl("PNR", Remarques),
