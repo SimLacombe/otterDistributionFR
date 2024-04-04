@@ -32,10 +32,10 @@ dat1 <- dat1%>%
          PA.protocole = "point",
          collision = FALSE,
          date = as.Date(date),
-         loc = NA,
          data.provider = "GRIFS",
-         year = year(date)) %>%
-  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, presence)
+         year = year(date),
+         CT.period = NA) %>%
+  select(data.provider, PA, PA.protocole, collision, year, date, lon.l93, lat.l93, presence, CT.period)
 
 
 dat2 <- read.csv(dat2.filename, sep = "\t")
@@ -44,23 +44,18 @@ dat2 <- dat2 %>%
          PA = FALSE,
          collision = ProcObserv == "trouvé mort (collision routière)",
          date = as.Date(DateDebut),
-         loc = NomCom,
          presence = as.numeric(StatPresen=="présent"),
          data.provider = "GRIFS",
          grid.cell = Maille10,
-         year = year(DateDebut)) %>%
+         year = year(DateDebut),
+         CT.period = NA) %>%
   rowwise() %>%
   mutate(lon.l93 = as.numeric(strsplit(str_extract(string = GeomWkt, pattern = "(?<=\\().*(?=\\))"), " ")[[1]][1]),
          lat.l93 = as.numeric(strsplit(str_extract(string = GeomWkt, pattern = "(?<=\\().*(?=\\))"), " ")[[1]][2])) %>% 
-  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, presence)
-
-dat1.sf <- dat1%>%
-  st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)
-dat2.sf <- dat2%>%
-  st_as_sf(coords = c("lon.l93", "lat.l93"), crs = 2154)
+  select(data.provider, PA, PA.protocole, collision, year, date, lon.l93, lat.l93, presence, CT.period)
 
 dat <- rbind(dat1, dat2)%>%
   mutate(grid.cell = ifelse(lon.l93 >= 1000000,
                             paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3)))) %>% 
-  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period)

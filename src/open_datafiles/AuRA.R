@@ -1,6 +1,10 @@
-require(tidyverse, lubridate, sf)
+library(tidyverse)
+library(lubridate)
+library(sf)
 
 dat.filename <- "data/PNA-data/RhônesAlpes-LPOAURA&GMA/data_loutre_ORB_AURA.gpkg"
+
+protocoles <- c("CT", "COLL", "UICN", "CPO", "EL", "LC", "PL", "PP", "PCS", "GJN", "RDE", "TR", "OPP")
 
 dat <- read_sf(dat.filename)
 
@@ -19,32 +23,34 @@ dat <- dat %>%
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))
 
 dat <- dat %>% 
-  mutate(comment = toupper(comment), comment_priv = toupper(comment_priv)) %>%
-  mutate(tr_len = as.numeric(gsub("\\D", "", str_extract(comment, "\\d\\d\\d\\dM"))),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d\\d\\d\\d M"))), tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d\\d\\d M"))), tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d\\d\\dM"))), tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d\\dKM")))*100, tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\dKM")))*10000, tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d\\d KM")))*1000, tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(comment, "\\d KM")))*1000, tr_len)) %>% 
-  mutate(PA = ((grepl("IUCN", comment)|grepl("UICN", comment)|grepl("PROTOCOL", comment_priv)|grepl("PROTOCOL", comment)|grepl("PNA", comment))&!
-                            (grepl("FRAPNA", comment)|grepl("NON PROTOCOL", comment)|grepl("NON PROTOCOL", comment_priv)|
-                               grepl("NON-PROTOCOL", comment_priv)|grepl("NON-PROTOCOL", comment))),
-         PA = PA|tr_len >= 300,
-         PA = ifelse(is.na(PA), FALSE, PA),
-         PA.protocole = ifelse(PA, "transect", NA),
-         collision = (grepl("MORT", comment)&(grepl("ROUT", comment)|grepl("NATIONALE", comment)|grepl("ÉCRAS", comment)|grepl("COLLISION", comment)))|
-           (grepl("MORT", comment_priv)&grepl("ROUT", comment_priv)))
+  mutate(comment = paste0(toupper(comment), " ", toupper(comment_priv))) %>%
+  mutate(CT = grepl("PIÈGE PHOTO", comment)|grepl("PIEGE PHOTO", comment)|grepl("PIÈGE-PHOTO", comment),
+         COLL = grepl("MORT", comment)&(grepl("ROUT", comment)|grepl("NATIONALE", comment)|grepl("ÉCRAS", comment)|grepl("COLLISION", comment)),
+         UICN = grepl("UICN", comment)|grepl("IUCN", comment)|(grepl("PROTOCOL", comment)|grepl("PRA LOUTRE", comment)&
+                    !(grepl("NON-PROTOCOL", comment)|grepl("NON PROTOCOL", comment)|grepl("HORS PROTOCOL", comment))),
+         CPO = grepl("CPO", comment),
+         EL = grepl("ETUDE:LOUTRE0", comment),
+         LC = grepl("LOUTRE-CASTOR", comment)|grepl("CASTOR-LOUTRE", comment),
+         PL = grepl("PROSPECTION LOUTRE", comment)|grepl("RECHERCHE LOUTRE", comment),
+         PP = grepl("PONCTUEL", comment),
+         PCS = grepl("PROSPECTION CIBLÉE", comment),
+         GJN = grepl("GROUPE JEUNES NATURE", comment),
+         RDE = grepl("SUIVI RDE", comment),
+         TR = grepl("\\d00 M", comment)|grepl("\\d00M", comment),
+         OPP = TRUE)
+
+dat <- dat %>% 
+  pivot_longer(cols = protocoles, names_to = "protocole", values_to = "TF") %>%
+  group_by(id_synthese, data.provider, year, date, lon.l93, lat.l93, grid.cell, presence) %>%
+  summarise(protocole = protocole[TF][1]) %>%
+  mutate(PA = !protocole %in% c("OPP", "CT"),
+        PA.protocole = ifelse(PA, "transect", NA),
+        collision = protocole == "COLL",
+        CT.period = NA) %>% 
+  ungroup
 
 dat <- dat%>%
-  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period)
 
-# QU'est ce que : 
-# * ETUDE PRÉALABLE À LA DÉFINITION DU CONTRAT DE BIODIVERSITÉ DU HAUT-RHÔNE 2011-2015. SYNDICAT DU HAUT-RHÔNE (29),
-# * @LDBRUT:PONT DE VARÉZIEU; @NSA:0; @MALE:0; @FEMELLE:0; @STATUT:ABS; @SOURCE:2008-0184;@OBSERVATEURS:DUPOUX E. & LUCAS J.; @IDCORA:270586 (178)
-# * FRAPNA : ATLAS MAMMALO (64), LPO (54), ... total 180
-# * ETUDE LOUTRE CASTOR (91)
-# * FNE LOIRE 2020 (117)
 
 

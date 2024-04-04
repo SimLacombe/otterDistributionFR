@@ -29,16 +29,16 @@ dat <- dat %>%
   mutate(date = as.Date(Date),
          year = year(date),
          presence = sign(Nombre),
-         data.provider = "LPO-PdL",
-         loc = paste(Commune, `Lieu-dit`, sep = ".")) %>%
+         data.provider = "LPO-PdL") %>%
   rename(lon.l93 = `X Lambert93 [m]`,
          lat.l93 = `Y Lambert93 [m]`,
          grid.cell = Maille) %>%
-  group_by(Réf, data.provider, year, date, loc, lon.l93, lat.l93, grid.cell, presence) %>%
+  group_by(Réf, data.provider, year, date, lon.l93, lat.l93, grid.cell, presence) %>%
   summarise(protocole = protocole[TF][1]) %>%
-  mutate(PA = (protocole != "OPP"),
-         PA.protocole = ifelse(protocole %in% c("UICN", "KAYAK"), "transect", ifelse(protocole %in% c("OPP", "CT", "COLL"), "point", NA)),
-         collision = protocole == "COLL") %>%
+  mutate(PA = (!protocole %in% c("OPP", "CT")),
+         PA.protocole = ifelse(protocole %in% c("UICN", "KAYAK"), "transect", ifelse(!protocole %in% c("OPP", "CT", "COLL"), "point", NA)),
+         collision = protocole == "COLL",
+         CT.period = NA) %>%
   ungroup %>%
-  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider, PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period)
 

@@ -19,8 +19,8 @@ dat <- dat %>%
          date = as.Date(date_debut, format = "%d/%m/%Y"),
          year = year(date),
          presence = as.numeric(statut_observation  == "Présent"),
-         data.provider = "GMB") %>%
-  rename(loc = communes)
+         data.provider = "GMB",
+         CT.period = NA)
 
 dat[, c("lon.l93", "lat.l93")] <- dat %>%
   st_as_sf(coords = c("x_centroid_4326", "y_centroid_4326"), crs = 4326) %>%
@@ -34,4 +34,4 @@ dat <- dat %>%
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))
 
 dat <- dat %>%
-  select(data.provider,PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  select(data.provider,PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period)

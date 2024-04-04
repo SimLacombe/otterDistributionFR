@@ -1,31 +1,35 @@
-require(tidyverse, lubridate)
-
+library(tidyverse)
+library(lubridate)
 
 dat.filename <- "data/PNA-data/PaysdelaLoire-LPOsarthe/Export_données_loutre_SFEPM_CEFE_LPO_Sarthe 31_01_2024.xlsx"
+
+protocoles <- c("PRA", "SLL", "SL", "OPP")
 
 dat <- readxl::read_xlsx(dat.filename)
 
 dat <- dat %>% 
   mutate(Remarques = toupper(Remarques),
-         tr_len = as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\d\\dM"))),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\d\\d M"))), tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\d M"))), tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d\\dM"))), tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\dKM")))*1000, tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\dKM")))*1000, tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d\\d KM")))*1000, tr_len),
-         tr_len = ifelse(is.na(tr_len), as.numeric(gsub("\\D", "", str_extract(Remarques, "\\d KM")))*1000, tr_len))%>%
-  mutate(PA = grepl("PNA", Remarques)|grepl("PRA", Remarques)|grepl("UICN", Remarques)|grepl("POINT", Remarques),
-         PA = PA|tr_len >= 300,
-         PA = ifelse(is.na(PA), FALSE, PA),
-         PA.protocole = ifelse(PA, "transect", NA))%>%
+         PRA = grepl("PRA", Remarques)|grepl("PSA", Remarques)|grepl("PH", Remarques)|grepl("UICN", Remarques),
+         SLL = grepl("SUIVI LOCAL", Remarques),
+         SL = grepl("SUIVI LOUTRE 20", Remarques),
+         OPP = !PRA&!SLL&!SL)
+
+
+dat <- dat %>%
+  pivot_longer(cols = protocoles, names_to = "protocole", values_to = "TF") %>%
   mutate(collision = FALSE,
          date = as.Date(Date),
          year = year(date),
          presence = sign(Nombre),
-         data.provider = "LPO-PdL",
-         loc = paste(Commune, `Lieu-dit`, sep = ".")) %>%
+         data.provider = "LPO-PdL") %>%
   rename(lon.l93 = `X Lambert93 [m]`,
          lat.l93 = `Y Lambert93 [m]`,
          grid.cell = Maille) %>%
-  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+  group_by(Réf, data.provider, year, date, lon.l93, lat.l93, grid.cell, presence) %>%
+  summarise(protocole = protocole[TF][1]) %>%
+  mutate(PA = (protocole != "OPP"),
+         PA.protocole = ifelse(PA, "transect", NA),
+         collision = FALSE,
+         CT.period = NA) %>%
+  ungroup %>% 
+  select(data.provider, PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period)

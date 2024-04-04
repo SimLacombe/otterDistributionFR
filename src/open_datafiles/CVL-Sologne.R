@@ -1,4 +1,5 @@
-require(tidyverse, lubridate)
+library(tidyverse)
+library(lubridate)
 
 dat.filename <- "data/PNA-data/CentreValdeLoire-sologne-nature-environnement/Export_Loutre_SNE-06072023.xlsx"
 
@@ -11,9 +12,9 @@ dat <- dat %>%
          data.provider = "SNE", 
          PA = TRUE,
          PA.protocole  = "transect",
-         collision = FALSE) %>%
+         collision = FALSE,
+         CT.period = NA) %>%
   rename(lon.l93 = `x Lambert93`,
          lat.l93 = `y Lambert93`,
-         grid.cell = `Maille 10 Lambert93`,
-         loc = Commune) %>%
-  select(data.provider,PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+         grid.cell = `Maille 10 Lambert93`) %>%
+  select(data.provider,PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period)

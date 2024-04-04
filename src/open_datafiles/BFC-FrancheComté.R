@@ -1,4 +1,4 @@
-require(tidyverse, lubridate)
+library(tidyverse, lubridate)
 
 dat.filename <- "data/PNA-data/BourgogneFrancheComté-LPOBFA/Copie de Données_loutre_LPOBFC_thèse.csv"
 dat <- read.csv(dat.filename, sep = ";")
@@ -10,11 +10,11 @@ dat <- dat %>%
          PA.protocole = ifelse(PA, "transect", NA),
          collision = FALSE,
          date = as.Date(Date, format = "%d/%m/%Y"),
-         loc = NA,
          presence = sign(Nombre),
          data.provider = "LPO-BFC",
          grid.cell = Maille,
          year = year(date),
          lon.l93 = NA,
-         lat.l93 = NA) %>%
-  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+         lat.l93 = NA,
+         CT.period = NA) %>%
+  select(data.provider, PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period)

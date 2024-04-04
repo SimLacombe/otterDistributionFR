@@ -11,16 +11,16 @@ dat2 <- read.csv(dat2.filename, sep = ";")
 
 dat <- rbind(dat1[, names(dat1) %in% names(dat2)], dat2[, names(dat2) %in% names(dat1)]) %>% 
   filter(DATE_OBS != "") %>%
-  mutate(PA = PROTOCOLE == "SFEPM-Loutre", 
+  mutate(PA = PROGRAMME == "OFAB-Mammifères-Loutre", 
          PA.protocole = ifelse(PA, "transect", NA),
          collision = FALSE,
          date = as.Date(DATE_OBS),
-         loc = COMMUNE,
          presence = as.numeric(VIVANT=="VRAI"|EMPREINTES=="VRAI"|CROTTES=="VRAI"),
          data.provider = "SHNA",
          grid.cell = LAMBERT_93,
          year = year(date),
          lon.l93 = NA,
-         lat.l93 = NA) %>%
-  select(data.provider, PA, PA.protocole, collision, year, date, loc, lon.l93, lat.l93, grid.cell, presence)
+         lat.l93 = NA,
+         CT.period = NA) %>%
+  select(data.provider, PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period)
 
