@@ -62,7 +62,7 @@ saveRDS(map_FR, "data/map_fr.rds")
 
 src.path <- "src/open_datafiles"
 
-otter.dat <- foreach(src = list.files(src.path, full.names = TRUE),.combine = rbind) %do%{
+otter.dat <- foreach(src = list.files(src.path, full.names = TRUE)[-1], .combine = rbind) %do%{
   source(src)
   dat
 }
@@ -144,4 +144,17 @@ otter.dat.filtered %>%
     theme_bw()+
     theme(legend.position = "bottom")+
     facet_wrap(~paste0(period * 4, " - ", period * 4 + 3))
+
+otter.dat.filtered %>%
+  st_drop_geometry() %>%
+  filter(PA) %>%
+  group_by(period = year %/% 4, grid.cell) %>%
+  left_join(grid[,c("geometry", "grid.cell")], by = "grid.cell") %>%
+  st_as_sf %>%
+  ggplot()+
+  geom_sf(data=map_FR)+
+  geom_sf(aes(fill = PA.protocole))+
+  theme_bw()+
+  theme(legend.position = "bottom")+
+  facet_wrap(~paste0(period * 4, " - ", period * 4 + 3))
 
