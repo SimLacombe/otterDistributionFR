@@ -11,20 +11,20 @@ rm(list = ls())
 # map_FR <- read_sf("data/regions-20140306-5m-shp/") %>%
 #   filter(code_insee %in% c("42", "72", "83", "25", "26", "53",
 #                             "24", "21", "43", "23", "11", "91",
-#                             "74", "41", "73", "31", "52", "22", 
+#                             "74", "41", "73", "31", "52", "22",
 #                             "54", "93", "82")) %>%
 #   rmapshaper::ms_simplify() %>%
 #   st_transform(crs = 2154)
 # 
 # insee_to_dataRegion <- data.frame(code_insee = c("42", "72", "83", "25", "26", "53",
 #                                                  "24", "21", "43", "23", "11", "91",
-#                                                  "74", "41", "73", "31", "52", "22", 
+#                                                  "74", "41", "73", "31", "52", "22",
 #                                                  "54", "93", "82"),
 #                                   data_region = c("noDat", "Aq", "Au", "No", "Bo", "Br", "Cvl",
 #                                                   "noDat", "FC", "No", "noDat", "Oc", "Li", "noDat", "Oc",
-#                                                   "noDat", "PdL", "noDat", "Aq", "PACA", "RA"))
+#                                                   "noDat", "PdL", "noDat", "PoCha", "PACA", "RA"))
 # 
-# map_FR <- map_FR %>% 
+# map_FR <- map_FR %>%
 #   left_join(insee_to_dataRegion, by = "code_insee") %>%
 #   group_by(data_region) %>%
 #   summarize()
@@ -159,4 +159,12 @@ otter.dat.filtered %>%
   theme_bw()+
   theme(legend.position = "bottom")+
   facet_wrap(~paste0(period * 4, " - ", period * 4 + 3))
+
+otter.dat.filtered %>%
+  filter(!PA&presence) %>%
+  mutate(period = year %/% 4) %>%
+  ggplot()+
+  geom_sf(data = map_FR)+
+  geom_sf()+
+  facet_wrap(~period)
 

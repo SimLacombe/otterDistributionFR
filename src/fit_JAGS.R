@@ -10,9 +10,7 @@ library(mgcv)
 
 rm(list = ls())
 
-# regions = c("Aq", "Au", "Bo", "Br", "Cvl", "FC", "Li", "No", "Oc", "PACA", "PdL", "RA", "noDat")canc
-
-regions = c("Au", "Aq","Bo", "FC", "Li", "Oc", "PACA", "RA")
+regions = c("Aq", "Au", "Bo", "Br", "Cvl", "FC", "Li", "No", "Oc", "PACA", "PdL","PoCha", "RA", "noDat")
 
 tmp.res = 2 #years
 
@@ -49,7 +47,7 @@ otterDat$period <- otterDat$year %/% tmp.res
 
 pa.dat <- otterDat %>%
   st_drop_geometry() %>%
-  filter(PA, grid.cell %in% L93_grid$grid.cell) %>%
+  filter(PA, grid.cell %in% L93_grid$grid.cell, PA.protocole != "CT") %>%
   group_by(period, grid.cell, PA.protocole) %>%
   summarize(K = n(),
             y = sum(presence),
@@ -66,7 +64,7 @@ pa.idxs <- c(0, cumsum(npa))
 
 po.dat <- otterDat %>%
   st_drop_geometry() %>%
-  filter(!PA, as.logical(presence), grid.cell %in% L93_grid$grid.cell) %>%
+  filter(!PA, as.logical(presence), grid.cell %in% L93_grid$grid.cell, !collision) %>%
   group_by(period, grid.cell) %>%
   summarize() %>%
   arrange(period)
@@ -273,7 +271,7 @@ ggplot()+
  
  ggplot(latent.df.peryear)+
    geom_point(aes(x = period, y = psi.med))+
-   geom_ribbon(aes(x = period, ymin = psi.inf, ymax = psi.sup), alpha = 0.5, col = "black", fill = NA)+
+   geom_ribbon(aes(x = period, ymin = psi.inf, ymax = psi.sup), alpha = 0.5, col = "black")+
    theme_bw()
  
  ggplot(beta_reg.df)+
