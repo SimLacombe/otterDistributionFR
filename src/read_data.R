@@ -8,61 +8,61 @@ rm(list = ls())
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CREATE GRID ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ### 
 
-map_FR <- read_sf("data/regions-20140306-5m-shp/") %>%
-  filter(code_insee %in% c("42", "72", "83", "25", "26", "53",
-                            "24", "21", "43", "23", "11", "91",
-                            "74", "41", "73", "31", "52", "22", 
-                            "54", "93", "82")) %>%
-  rmapshaper::ms_simplify() %>%
-  st_transform(crs = 2154)
+# map_FR <- read_sf("data/regions-20140306-5m-shp/") %>%
+#   filter(code_insee %in% c("42", "72", "83", "25", "26", "53",
+#                             "24", "21", "43", "23", "11", "91",
+#                             "74", "41", "73", "31", "52", "22", 
+#                             "54", "93", "82")) %>%
+#   rmapshaper::ms_simplify() %>%
+#   st_transform(crs = 2154)
+# 
+# insee_to_dataRegion <- data.frame(code_insee = c("42", "72", "83", "25", "26", "53",
+#                                                  "24", "21", "43", "23", "11", "91",
+#                                                  "74", "41", "73", "31", "52", "22", 
+#                                                  "54", "93", "82"),
+#                                   data_region = c("noDat", "Aq", "Au", "No", "Bo", "Br", "Cvl",
+#                                                   "noDat", "FC", "No", "noDat", "Oc", "Li", "noDat", "Oc",
+#                                                   "noDat", "PdL", "noDat", "Aq", "PACA", "RA"))
+# 
+# map_FR <- map_FR %>% 
+#   left_join(insee_to_dataRegion, by = "code_insee") %>%
+#   group_by(data_region) %>%
+#   summarize()
+# 
+# grid <- st_make_grid(map_FR, crs = 2154,
+#                      cellsize = c(10000,10000),
+#                      offset = c(99000, 6130000)) %>%
+#   st_as_sf
+# 
+# grid <- cbind(grid, st_coordinates(st_centroid(grid))) %>%
+#   rename(geometry = x,
+#          lon.l93 = X, lat.l93 = Y) %>%
+#   mutate(grid.cell = ifelse(lon.l93 >= 1000000,
+#                            paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
+#                            paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3)))) %>%
+#   st_join(map_FR[, "data_region"], largest = TRUE) %>%
+#   filter(!is.na(data_region))
+# 
+# grid2 <- grid %>%
+#   st_intersection(st_union(map_FR))
+# 
+# saveRDS(grid, "data/L9310x10grid_uncropped.rds")
+# saveRDS(grid2, "data/L9310x10grid.rds")
+# saveRDS(map_FR, "data/map_fr.rds")
 
-insee_to_dataRegion <- data.frame(code_insee = c("42", "72", "83", "25", "26", "53",
-                                                 "24", "21", "43", "23", "11", "91",
-                                                 "74", "41", "73", "31", "52", "22", 
-                                                 "54", "93", "82"),
-                                  data_region = c("noDat", "Aq", "Au", "No", "Bo", "Br", "Cvl",
-                                                  "noDat", "FC", "No", "noDat", "Oc", "Li", "noDat", "Oc",
-                                                  "noDat", "PdL", "noDat", "Aq", "PACA", "RA"))
-
-map_FR <- map_FR %>% 
-  left_join(insee_to_dataRegion, by = "code_insee") %>%
-  group_by(data_region) %>%
-  summarize()
-
-grid <- st_make_grid(map_FR, crs = 2154,
-                     cellsize = c(10000,10000),
-                     offset = c(99000, 6130000)) %>%
-  st_as_sf
-
-grid <- cbind(grid, st_coordinates(st_centroid(grid))) %>%
-  rename(geometry = x,
-         lon.l93 = X, lat.l93 = Y) %>%
-  mutate(grid.cell = ifelse(lon.l93 >= 1000000,
-                           paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
-                           paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3)))) %>%
-  st_join(map_FR[, "data_region"], largest = TRUE) %>%
-  filter(!is.na(data_region))
-
-grid2 <- grid %>%
-  st_intersection(st_union(map_FR))
-
-saveRDS(grid, "data/L9310x10grid_uncropped.rds")
-saveRDS(grid2, "data/L9310x10grid.rds")
-saveRDS(map_FR, "data/map_fr.rds")
-
-# grid <- readRDS("data/L9310x10grid_uncropped.rds")%>%
-#   st_as_sf(crs = 2154)
-# grid2 <- readRDS("data/L9310x10grid.rds")%>%
-#   st_as_sf(crs = 2154)
-# map_FR <- readRDS("data/map_fr.rds")%>%
-#   st_as_sf(crs = 2154)
+grid <- readRDS("data/L9310x10grid_uncropped.rds")%>%
+  st_as_sf(crs = 2154)
+grid2 <- readRDS("data/L9310x10grid.rds")%>%
+  st_as_sf(crs = 2154)
+map_FR <- readRDS("data/map_fr.rds")%>%
+  st_as_sf(crs = 2154)
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Load data ------------------------------------------------------------------
 
 src.path <- "src/open_datafiles"
 
-otter.dat <- foreach(src = list.files(src.path, full.names = TRUE)[-1], .combine = rbind) %do%{
+otter.dat <- foreach(src = list.files(src.path, full.names = TRUE), .combine = rbind) %do%{
   source(src)
   dat
 }
@@ -71,7 +71,9 @@ otter.dat <-  filter(otter.dat, !is.na(date))
 
 ### Get approx lat/lon for obs with missing coordinatess -----------------------
 
-otter.dat[is.na(otter.dat$lat.l93), c("lon.l93", "lat.l93")] <- otter.dat[is.na(otter.dat$lat.l93), "grid.cell"] %>%
+otter.dat[is.na(otter.dat$lat.l93), c("lon.l93", "lat.l93")] <- otter.dat %>%
+  filter(is.na(lat.l93)) %>%
+  select("grid.cell") %>%
   left_join(grid[,c("lon.l93", "lat.l93", "grid.cell")], by = "grid.cell") %>%
   select(lon.l93, lat.l93)
 
