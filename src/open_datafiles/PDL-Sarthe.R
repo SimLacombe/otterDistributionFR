@@ -3,16 +3,16 @@ library(lubridate)
 
 dat.filename <- "data/PNA-data/PaysdelaLoire-LPOsarthe/Export_données_loutre_SFEPM_CEFE_LPO_Sarthe 31_01_2024.xlsx"
 
-protocoles <- c("PRA", "SLL", "SL", "OPP")
+protocoles <- c("UICN", "SLL", "SL", "OPP")
 
 dat <- readxl::read_xlsx(dat.filename)
 
 dat <- dat %>% 
   mutate(Remarques = toupper(Remarques),
-         PRA = grepl("PRA", Remarques)|grepl("PSA", Remarques)|grepl("PH", Remarques)|grepl("UICN", Remarques),
+         UICN = grepl("PRA", Remarques)|grepl("PSA", Remarques)|grepl("PH", Remarques)|grepl("UICN", Remarques),
          SLL = grepl("SUIVI LOCAL", Remarques),
          SL = grepl("SUIVI LOUTRE 20", Remarques),
-         OPP = !PRA&!SLL&!SL)
+         OPP = TRUE)
 
 
 dat <- dat %>%

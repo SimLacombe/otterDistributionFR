@@ -4,7 +4,7 @@ library(sf)
 
 dat.filename <- "data/PNA-data/RhônesAlpes-LPOAURA&GMA/data_loutre_ORB_AURA.gpkg"
 
-protocoles <- c("CT", "COLL", "UICN", "CPO", "EL", "LC", "PL", "PP", "PCS", "GJN", "RDE", "TR", "OPP")
+protocoles <- c("CT", "COLL", "UICN", "CPO", "EL", "LC", "PL", "PP", "PCS", "GJN", "RDE","CNR", "SL", "OPP")
 
 dat <- read_sf(dat.filename)
 
@@ -23,7 +23,8 @@ dat <- dat %>%
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))
 
 dat <- dat %>% 
-  mutate(comment = paste0(toupper(comment), " ", toupper(comment_priv))) %>%
+  mutate(comment = paste0(toupper(comment), " ", toupper(comment_priv)),
+         code_etude = ifelse(is.na(code_etude), "", code_etude)) %>%
   mutate(CT = grepl("PIÈGE PHOTO", comment)|grepl("PIEGE PHOTO", comment)|grepl("PIÈGE-PHOTO", comment),
          COLL = grepl("MORT", comment)&(grepl("ROUT", comment)|grepl("NATIONALE", comment)|grepl("ÉCRAS", comment)|grepl("COLLISION", comment)),
          UICN = grepl("UICN", comment)|grepl("IUCN", comment)|(grepl("PROTOCOL", comment)|grepl("PRA LOUTRE", comment)&
@@ -35,8 +36,9 @@ dat <- dat %>%
          PP = grepl("PONCTUEL", comment),
          PCS = grepl("PROSPECTION CIBLÉE", comment),
          GJN = grepl("GROUPE JEUNES NATURE", comment),
-         RDE = grepl("SUIVI RDE", comment),
-         TR = grepl("\\d00 M", comment)|grepl("\\d00M", comment),
+         RDE = grepl("SUIVI RDE", comment)|(code_etude == "RDE"),
+         CNR = grepl("CNR", comment)&grepl("PROSPECTION", comment),
+         SL = grepl("SUIVI LOUTRE", comment),
          OPP = TRUE)
 
 dat <- dat %>% 
