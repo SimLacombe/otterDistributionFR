@@ -2,16 +2,16 @@ library(tidyverse)
 library(lubridate)
 library(sf)
 
-dat1.filename <- "data/PNA-data/Aquitaine-GREGE/Grege_Données LLU tot_mai2021.xlsx"
+dat1.filename <- "data/PNA-data/Aquitaine-GREGE/Grege_Données LLU tot_mai2021.csv"
 etudes_transect <- c("Euskadour", "BPL", "A63 Ondres", "LGV SEA", "A65 Suivi", "A65 2014",
                      "LGV SEA 2013", "LGV BET", "LGV BET/Euskadour")
 
-dat1 <- readxl::read_xlsx(dat1.filename) %>%
+dat1 <- read.csv(dat1.filename, sep = ";", dec = ",") %>%
   filter(PRESENCE_LLU %in% c("Positif", "Négatif"),
-         !(is.na(Date)&is.na(DATE_)))
+         !((Date == "")&(DATE_ == "")))
 
 dat1$date <- dat1$Date
-dat1[is.na(dat1$date), "date"] <- dat1[is.na(dat1$date), "DATE_"]
+dat1[(dat1$date == ""), "date"] <- dat1[(dat1$date == ""), "DATE_"]
 
 dat1 <- dat1 %>% 
   mutate(PA = TRUE,

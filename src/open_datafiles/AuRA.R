@@ -4,7 +4,7 @@ library(sf)
 
 dat.filename <- "data/PNA-data/RhônesAlpes-LPOAURA&GMA/data_loutre_ORB_AURA.gpkg"
 
-protocoles <- c("CT", "COLL", "UICN", "CPO", "EL", "LC", "PL", "PP", "PCS", "GJN", "RDE","CNR", "SL", "OPP")
+protocoles <- c("CT", "COLL", "UICN", "CPO", "EL", "LC", "PL", "PP", "PCS", "GJN", "RDE","CNR", "SL", "ZNIEFF", "OPP")
 
 dat <- read_sf(dat.filename)
 
@@ -13,7 +13,7 @@ dat[, c("lon.l93", "lat.l93")] <- dat %>%
 
 dat <- dat %>% 
   as_data_frame() %>% 
-  filter(desc_source == "[LPO] visionature") %>% 
+  filter(desc_source %in % c("LPO] visionature", "[ORB] Import GMA")) %>% 
   mutate(year = year(date),
          loc = place,
          presence = as.numeric(is_present),
@@ -39,6 +39,7 @@ dat <- dat %>%
          RDE = grepl("SUIVI RDE", comment)|(code_etude == "RDE"),
          CNR = grepl("CNR", comment)&grepl("PROSPECTION", comment),
          SL = grepl("SUIVI LOUTRE", comment),
+         ZNIEFF = desc_source == "[ORB] Import GMA",
          OPP = TRUE)
 
 dat <- dat %>% 
