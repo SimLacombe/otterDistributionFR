@@ -98,27 +98,27 @@ source("src/utility_functions.R")
 thr.space = 500
 thr.time = 2
 
-otter.dat.filtered <- filter(otter.dat, year %in% 2009:2023)
+otter.dat <- filter(otter.dat, year %in% 2009:2023)
 
-otter.dat.filtered.1 <- filter(otter.dat.filtered, !PA)
-
-otter.dat.filtered.2 <- otter.dat.filtered %>%
-  filter(PA) %>%
-  group_by(year, grid.cell) %>%
-  mutate(obs = collapse_transects(date, geometry, thr.space, thr.time)) %>%
-  group_by(year, grid.cell, obs) %>%
-  arrange(desc(presence)) %>%
-  filter(row_number()==1) %>%
-  arrange(year, grid.cell) %>%
-  filter(obs < 6) %>%
-  select(-obs)
-
-otter.dat.filtered <- rbind(otter.dat.filtered.1, otter.dat.filtered.2)
+# otter.dat.filtered.1 <- filter(otter.dat, !PA)
+# 
+# otter.dat.filtered.2 <- otter.dat %>%
+#   filter(PA) %>%
+#   group_by(year, grid.cell) %>%
+#   mutate(obs = collapse_transects(date, geometry, thr.space, thr.time)) %>%
+#   group_by(year, grid.cell, obs) %>%
+#   arrange(desc(presence)) %>%
+#   filter(row_number()==1) %>%
+#   arrange(year, grid.cell) %>%
+#   filter(obs < 6) %>%
+#   select(-obs)
+# 
+# otter.dat.filtered <- rbind(otter.dat.filtered.1, otter.dat.filtered.2)
 
 ### SAVE -----------------------------------------------------------------------
 
 saveRDS(otter.dat, "data/otterDat.rds")
-saveRDS(otter.dat.filtered, "data/otterDatFiltered.rds")
+# saveRDS(otter.dat.filtered, "data/otterDatFiltered.rds")
 
 # otter.dat.filtered <- readRDS("data/otterDatFiltered.rds") %>%
 #   st_as_sf(crs = 2154)
@@ -127,7 +127,7 @@ saveRDS(otter.dat.filtered, "data/otterDatFiltered.rds")
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PLOT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ### 
 
-otter.dat.filtered %>%
+otter.dat %>%
   st_drop_geometry() %>%
   filter(PA|presence) %>%
   group_by(period = year %/% 4, grid.cell) %>%
@@ -139,7 +139,7 @@ otter.dat.filtered %>%
   st_as_sf %>%
   ggplot()+
     geom_sf(data=map_FR)+
-    geom_sf(data = otter.dat.filtered %>% filter(!PA&!presence) %>%
+    geom_sf(data = otter.dat %>% filter(!PA&!presence) %>%
                mutate(period = year %/% 4), alpha = 0.1)+
     geom_sf(aes(fill = cell.status))+
     scale_fill_manual(name = "", values = c("orange", "lightblue", "darkblue"))+
@@ -147,7 +147,7 @@ otter.dat.filtered %>%
     theme(legend.position = "bottom")+
     facet_wrap(~paste0(period * 4, " - ", period * 4 + 3))
 
-otter.dat.filtered %>%
+otter.dat %>%
   st_drop_geometry() %>%
   filter(PA) %>%
   group_by(period = year %/% 4, grid.cell) %>%
@@ -160,7 +160,7 @@ otter.dat.filtered %>%
   theme(legend.position = "bottom")+
   facet_wrap(~paste0(period * 4, " - ", period * 4 + 3))
 
-otter.dat.filtered %>%
+otter.dat %>%
   filter(!PA&presence) %>%
   mutate(period = year %/% 4) %>%
   ggplot()+

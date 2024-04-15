@@ -39,7 +39,7 @@ dat1 <- dat1 %>%
          PA.protocole = NA,
          collision = FALSE,
          presence = 1,
-         data.provider = GestionnaireJdd,
+         data.provider = paste0("FAUNA - ", GestionnaireJdd),
          CT.period = NA)%>% 
   mutate(grid.cell = ifelse(lon.l93 >= 1000000,
                             paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
@@ -56,6 +56,7 @@ dat2 <- dat2 %>%
          presence = 1,
          CT.period = NA) %>%
   separate(NomJeuDonnees, into = c("tmp..", "data.provider", "..tmp"), sep = '\"') %>%
+  mutate(data.provider = paste0("FAUNA - ", data.provider)) %>%
   select(data.provider,PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period)
 
 dat <- rbind(dat1, dat2)

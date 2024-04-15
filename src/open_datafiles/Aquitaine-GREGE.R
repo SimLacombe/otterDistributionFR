@@ -14,7 +14,8 @@ dat1$date <- dat1$Date
 dat1[(dat1$date == ""), "date"] <- dat1[(dat1$date == ""), "DATE_"]
 
 dat1 <- dat1 %>% 
-  mutate(PA = TRUE,
+  mutate(date = as.Date(date),
+         PA = TRUE,
          PA.protocole = ifelse(ETUDE %in% etudes_transect, "transect", "point"),
          collision = FALSE,
          year = year(date),

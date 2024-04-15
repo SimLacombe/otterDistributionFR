@@ -14,7 +14,7 @@ dat <- dat %>%
          date = as.Date(Date),
          year = year(date),
          presence = sign(Nombre),
-         data.provider = "LPO",
+         data.provider = "LPO-Occitanie",
          CT.period = NA) %>%
   rename(lon.l93 = `X Lambert93 [m]`,
          lat.l93 = `Y Lambert93 [m]`,
