@@ -65,8 +65,7 @@ pa.idxs <- c(0, cumsum(npa))
 po.dat <- otterDat %>%
   st_drop_geometry() %>%
   filter(!PA, as.logical(presence), grid.cell %in% L93_grid$grid.cell, !collision) %>%
-  group_by(period, grid.cell) %>%
-  summarize() %>%
+  select(period, grid.cell) %>%
   arrange(period)
 
 po.dat$pixel <- sapply(po.dat$grid.cell, FUN = function(x){which(L93_grid$grid.cell == x)})
