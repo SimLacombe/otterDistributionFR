@@ -64,8 +64,11 @@ src.path <- "src/open_datafiles"
 
 otter.dat <- foreach(src = list.files(src.path, full.names = TRUE), .combine = rbind) %do%{
   source(src)
+  rm(list = setdiff(ls(), c("dat", "src.path")))
   dat
 }
+
+rm(dat)
 
 otter.dat <-  filter(otter.dat, !is.na(date))
 
