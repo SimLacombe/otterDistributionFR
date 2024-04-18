@@ -6,7 +6,7 @@ dat <- read.csv(dat.filename, sep = ";")
 dat$Remarque <- iconv(dat$Remarque, from = "ISO-8859-1", to = "UTF-8")%>%toupper
 
 dat <- dat %>% 
-  mutate(PA = (Protocole == "Protocole standard maille 10x10km adapt\xe9 \xe0 la Franche-Comt\xe9"|grepl("PRA", Remarque)|grepl("PAR", Remarque)), 
+  mutate(PA = (Protocole == "Protocole standard maille 10x10km adapt\xe9 \xe0 la Franche-Comt\xe9"|grepl("PRA", Remarque)), 
          PA.protocole = ifelse(PA, "transect", NA),
          collision = FALSE,
          date = as.Date(Date, format = "%d/%m/%Y"),
