@@ -13,7 +13,7 @@ dat[, c("lon.l93", "lat.l93")] <- dat %>%
 
 dat <- dat %>% 
   as_data_frame() %>% 
-  filter(desc_source %in% c("[LPO] visionature", "[ORB] Import GMA")) %>% 
+  filter(desc_source %in% c("[LPO] visionature")) %>% 
   mutate(year = year(date),
          loc = place,
          presence = as.numeric(is_present),

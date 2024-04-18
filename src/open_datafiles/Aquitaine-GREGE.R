@@ -45,7 +45,7 @@ dat2 <- read.csv(dat2.filename, sep = ";", dec = ",") %>%
          CT.period = NA) %>% 
   rename(lon.l93 = POINT_X,
          lat.l93 = POINT_Y) %>%
-  filter(year %in% 2009:2023) %>%
+  filter(year %in% 2009:2023, NATOBS != "MOR") %>%
   mutate(grid.cell = ifelse(lon.l93 >= 1000000,
                             paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3)))) %>%

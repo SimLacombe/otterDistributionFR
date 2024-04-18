@@ -5,14 +5,28 @@ dat2.filename <- "data/PNA-data/BourgogneFrancheComté-SHNA/BBF20231005_Loutre_e
 
 dat1 <- read.csv(dat1.filename, sep = ";") %>%
   filter(LAMBERT_93 != "") %>%
-  mutate(PROTOCOLE = "SFEPM-Loutre",
-         VIVANT = "FAUX") #for now, I need to find a solution to this issue
-dat2 <- read.csv(dat2.filename, sep = ";")
+  mutate(TYPE = toupper(TYPE),
+         PA = (TYPE != "")|grepl("maille", COMMENTAIRE_RELEVE)|grepl("\\d\\d\\d m", COMMENTAIRE_RELEVE)|grepl("\\d\\d\\dm", COMMENTAIRE_RELEVE), 
+         PA.protocole = ifelse(PA&grepl("PONT", TYPE), "point", ifelse(PA, "transect", NA)),
+         collision = FALSE,
+         date = as.Date(DATE_OBS),
+         presence = as.numeric(EMPREINTES=="VRAI"|CROTTES=="VRAI"),
+         data.provider = "SHNA - OFAB",
+         grid.cell = LAMBERT_93,
+         year = year(date),
+         lon.l93 = NA,
+         lat.l93 = NA,
+         CT.period = NA) %>%
+  select(data.provider, PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period)
 
-dat <- rbind(dat1[, names(dat1) %in% names(dat2)], dat2[, names(dat2) %in% names(dat1)]) %>% 
-  filter(DATE_OBS != "") %>%
-  mutate(PA = PROGRAMME == "OFAB-Mammifères-Loutre", 
-         PA.protocole = ifelse(PA, "transect", NA),
+
+dat2 <- read.csv(dat2.filename, sep = ";") %>% 
+  filter(DATE_OBS != "",
+         METHODE != "Piège photo") %>%
+  mutate(TYPE = toupper(TYPE),
+         PA.protocole = ifelse(PROTOCOLE == "SFEPM-Loutre", "transect", 
+                               ifelse(grepl("PONT", TYPE)|grepl("BUSE", TYPE)|grepl("VIADUC", TYPE), "point", NA)),
+         PA = PA.protocole %in% c("transect", "point"),
          collision = FALSE,
          date = as.Date(DATE_OBS),
          presence = as.numeric(VIVANT=="VRAI"|EMPREINTES=="VRAI"|CROTTES=="VRAI"),
@@ -24,3 +38,4 @@ dat <- rbind(dat1[, names(dat1) %in% names(dat2)], dat2[, names(dat2) %in% names
          CT.period = NA) %>%
   select(data.provider, PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period)
 
+dat <- rbind(dat1, dat2)

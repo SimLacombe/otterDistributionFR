@@ -66,7 +66,7 @@ otter.dat <-
   foreach(src = list.files(src.path, full.names = TRUE),
           .combine = rbind) %do% {
             source(src)
-            rm(list = setdiff(ls(), c("dat", "src.path")))
+            rm(list = setdiff(ls(), c("dat", "src.path", "grid", "grid2", "map_FR")))
             dat
           }
 
