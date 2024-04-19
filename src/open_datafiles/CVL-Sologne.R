@@ -6,15 +6,19 @@ dat.filename <- "data/PNA-data/CentreValdeLoire-sologne-nature-environnement/Exp
 dat <- readxl::read_xlsx(dat.filename, skip = 1) 
 
 dat <- dat %>%
+  filter(`Type de donnée` != "publique")
+
+dat <- dat %>%
   mutate(date = as.Date(Date, format = "%d/%m/%Y"),
          year = year(date),
          presence = as.numeric(`Statut obs` == "Présent"),
          data.provider = "SNE", 
-         PA = TRUE,
-         PA.protocole  = "transect",
+         PA = `Type de donnée` == "acquise sur fonds publics" & year %in% c(2015, 2019:2021),
+         PA.protocole  = ifelse(PA, "transect", NA),
          collision = FALSE,
          CT.period = NA) %>%
   rename(lon.l93 = `x Lambert93`,
          lat.l93 = `y Lambert93`,
          grid.cell = `Maille 10 Lambert93`) %>%
   select(data.provider,PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period)
+
