@@ -1,7 +1,14 @@
-require(tidyverse, lubridate, sf)
+library(tidyverse)
+library(lubridate)
+library(sf)
 
 dat.filename <- "data/PNA-DATA/Bretagne-GMB/Data_Lutra_GMB.csv"
 dat <- read.csv(dat.filename, sep = ";") 
+
+dat <- dat %>% 
+  addProtocole(colNames = "jdd_nom",
+               patterns = "Inventaire Mammifères semi-aquatiques de l'Atlas|prospections Loutre standardisées|études Loutre GMB",
+               protName = "IUCN")
 
 dat <- dat %>%
   mutate(PA = jdd_nom %in% c("Données publiques de l'Inventaire Mammifères semi-aquatiques de l'Atlas 2010-14",

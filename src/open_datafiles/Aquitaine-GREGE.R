@@ -70,34 +70,4 @@ dat3 <- read.csv(dat3.filename, sep = ";", dec = ",") %>%
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3)))) %>%
   select(data.provider,PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period) 
 
-otterCTObs.filename <- "data/PNA-data/Aquitaine-GREGE/CT_otter.csv"
-CTdat.filename <- "data/PNA-data/Aquitaine-GREGE/CT_all.csv"
-
-otterCTObs <- read.csv(otterCTObs.filename, sep = ";", dec = ",") %>%
-  group_by(OBJECTID, Date_Relevé) %>%
-  summarize(nobs = n())
-
-CT_dat <- read.csv(CTdat.filename, sep = ";", dec = ",") %>% 
-  select(OBJECTID, Date_Pose, Date_Relevé, POINT_X, POINT_Y) %>%
-  group_by(OBJECTID) %>%
-  mutate(Date_Prev = lag(Date_Relevé, 1),
-         Date_Prev = ifelse(is.na(Date_Prev), Date_Pose, Date_Prev)) %>%
-  ungroup %>%
-  left_join(otterCTObs, by = c("OBJECTID", "Date_Relevé")) %>%
-  mutate(date = as.Date(Date_Relevé),
-         year = year(date),
-         PA = TRUE,
-         PA.protocole = "CT",
-         collision = FALSE,
-         presence = ifelse(is.na(nobs), 0, sign(nobs)),
-         data.provider = "GREGE",
-         CT.period = as.numeric(difftime(Date_Relevé, Date_Prev, units = "day"))) %>% 
-  rename(lon.l93 = POINT_X,
-         lat.l93 = POINT_Y) %>%
-  filter(year %in% 2009:2023) %>%
-  mutate(grid.cell = ifelse(lon.l93 >= 1000000,
-                            paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
-                            paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))%>%
-  select(data.provider,PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period) 
-
-dat <- rbind(dat1, dat2, dat3, CT_dat)
+dat <- rbind(dat1, dat2, dat3)

@@ -23,11 +23,16 @@ dat <- dat %>%
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))
 
 dat <- dat %>% 
+  addProtocole(colNames = c("desc_source", "comment"),
+               patterns = c("[LPO] visionature", "IUCN|UICN|PROTOCOL|PRA LOUTRE_&!_NON-PROTOCOL|NON PROTOCOL|HORS PROTOCOL"),
+               protName = "IUCN")
+
+dat <- dat %>% 
   mutate(comment = paste0(toupper(comment), " ", toupper(comment_priv)),
          code_etude = ifelse(is.na(code_etude), "", code_etude)) %>%
   mutate(CT = grepl("PIÈGE PHOTO", comment)|grepl("PIEGE PHOTO", comment)|grepl("PIÈGE-PHOTO", comment),
          COLL = grepl("MORT", comment)&(grepl("ROUT", comment)|grepl("NATIONALE", comment)|grepl("ÉCRAS", comment)|grepl("COLLISION", comment)),
-         UICN = grepl("UICN", comment)|grepl("IUCN", comment)|(grepl("PROTOCOL", comment)|grepl("PRA LOUTRE", comment)&
+         UICN = (grepl("UICN", comment)|grepl("IUCN", comment)|(grepl("PROTOCOL", comment)|grepl("PRA LOUTRE", comment))&
                     !(grepl("NON-PROTOCOL", comment)|grepl("NON PROTOCOL", comment)|grepl("HORS PROTOCOL", comment))),
          CPO = grepl("CPO", comment),
          EL = grepl("ETUDE:LOUTRE0", comment),

@@ -12,14 +12,10 @@ metadat <- read.csv(metadata.path, sep = "\t") %>%
 dat1 <- read.csv(data1.path, sep = "\t") %>%
   st_as_sf(wkt = "GeomWkt")%>%
   left_join(metadat[, c("IdJdd", "NomJeuDonnees", "GestionnaireJdd")]) %>%
-  mutate(GestionnaireJdd = ifelse(grepl("Indépendant", GestionnaireJdd), "Indépendant", GestionnaireJdd)) %>%
-  filter(grepl("opportuniste", NomJeuDonnees)|grepl("naturaliste", NomJeuDonnees)|grepl("faunistique", NomJeuDonnees),
-         !GestionnaireJdd %in%c("GREGE", "GRIFS", "GMHL"),
-         !grepl("RUYS", GestionnaireJdd),
-         !StatPresen == "absent") %>%
-  group_by(GestionnaireJdd) %>%
-  filter(n()> 100) %>%
-  ungroup
+  mutate(GestionnaireJdd = ifelse(grepl("Indépendant", GestionnaireJdd), "Indépendant", GestionnaireJdd)) %>% 
+  filter(GestionnaireJdd %in% c("Indépendant", "CD 33", "CEN Nouvelle-Aquitaine"),
+         grepl("opportuniste|naturaliste|faunistique", NomJeuDonnees),
+         !grepl("inventaire|suivi", NomJeuDonnees))
 
 dat2 <- read.csv(data2.path, sep = "\t") %>%
   st_as_sf(wkt = "GeomWkt") %>%
