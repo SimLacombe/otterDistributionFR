@@ -6,10 +6,40 @@ dat.filename <- "data/PNA-data/RhônesAlpes-LPOAURA&GMA/data_loutre_ORB_AURA.gp
 
 protocoles <- c("CT", "COLL", "UICN", "CPO", "EL", "LC", "PL", "PP", "PCS", "GJN", "RDE","CNR", "SL", "ZNIEFF", "OPP")
 
-dat <- read_sf(dat.filename)
+dat.sf <- read_sf(dat.filename)
 
-dat[, c("lon.l93", "lat.l93")] <- dat %>%
+dat <- st_drop_geometry(dat.sf)
+
+dat[, c("lon.l93", "lat.l93")] <- dat.sf %>%
   st_coordinates()
+# 
+# rm(dat.sf)
+# 
+# dat <- dat %>%
+#   mutate(comment = paste0(toupper(comment), " ", toupper(comment_priv))) %>%
+#   addProtocol(
+#     patterns = c("visionature", 
+#                  "IUCN|UICN|PROTOCOLE|PRA LOUTRE_&!_NON-PROTOCOL|NON PROTOCOL|HORS PROTOCOL"),
+#     protocol = IUCN,
+#     col1 = desc_source,
+#     col2 = comment
+#   ) %>%
+#   addProtocol(
+#     patterns = c("visionature", 
+#                  "PONCTUEL"),
+#     protocol = PP,
+#     col1 = desc_source,
+#     col2 = comment
+#   ) %>%
+#   addProtocol(
+#     patterns = c("visionature"),
+#     protocol = LPOAuRAPO,
+#     col1 = desc_source
+#   )
+# 
+# dat <- dat %>%
+#   arrangeProtocols(IUCN, PP, LPOAuRAPO) %>%
+#   filter(!is.na(protocol))
 
 dat <- dat %>% 
   as_data_frame() %>% 
@@ -21,11 +51,6 @@ dat <- dat %>%
          grid.cell = ifelse(lon.l93 >= 1000000,
                             paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
                             paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))
-
-dat <- dat %>% 
-  addProtocole(colNames = c("desc_source", "comment"),
-               patterns = c("[LPO] visionature", "IUCN|UICN|PROTOCOL|PRA LOUTRE_&!_NON-PROTOCOL|NON PROTOCOL|HORS PROTOCOL"),
-               protName = "IUCN")
 
 dat <- dat %>% 
   mutate(comment = paste0(toupper(comment), " ", toupper(comment_priv)),

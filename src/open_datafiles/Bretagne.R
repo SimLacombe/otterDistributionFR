@@ -3,7 +3,7 @@ library(lubridate)
 library(sf)
 
 # dat.filename <- "data/PNA-DATA/Bretagne-GMB/Data_Lutra_GMB.csv"
-# dat <- read.csv(dat.filename, sep = ";") 
+# dat <- read.csv(dat.filename, sep = ";")
 # 
 # dat <- dat %>%
 #   addProtocol(
@@ -17,7 +17,7 @@ library(sf)
 #     col1 = jdd_nom
 #   )
 # 
-# dat <- dat %>% 
+# dat <- dat %>%
 #   arrangeProtocols(IUCN, GMBPO) %>%
 #   filter(!is.na(protocol))
 

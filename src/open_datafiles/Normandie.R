@@ -1,18 +1,11 @@
 library(tidyverse)
 library(lubridate)
 
-dat1.filename <- "data/PNA-data/Normandie-GMN/LUTLUT_GMN_20210518.xlsx"
-dat2.filename <- "data/PNA-data/Normandie-GMN/LUTLUT_GMN_20231010.xlsx"
+dat.filename <- "data/PNA-data/Normandie-GMN/LUTLUT_GMN.csv"
 
 protocoles <- c("COLL", "CT", "UICN", "PP")
 
-dat1 <- readxl::read_xlsx(dat1.filename) %>%
-  select(-`N° de parcelle`)
-
-dat2 <- readxl::read_xlsx(dat2.filename) %>%
-  rename(ORGANISME = `Nom Observateur`)
-
-dat <- rbind(dat1,dat2) 
+dat <- read.csv(dat.filename)
 
 dat <- dat %>% 
   mutate(date = as.Date(`Date\r\nobservation`),
