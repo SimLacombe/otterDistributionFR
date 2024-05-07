@@ -1,19 +1,11 @@
-addProtocole <- function(data, colNames, patterns, protName) {
-  
-  if (length(colNames) != length(patterns)) {
-    stop("The number of columns given doesn't match the number of patterns")
-  }
-  
-  out <- rep(TRUE, nrow(data))
-  
-  for (i in seq_along(colNames)) {
-    out <- out & strSearch(data[[colNames[i]]], patterns[i])
-  }
-  
-  new_data <- data %>%
-    mutate(!!protName := out)
-  
-  return(new_data)
+### Perform protocol attribution based on keywords search ---------------------
+
+addProtocol <- function(x, patterns, protocol, col1, col2 ) {
+    x %>%
+      mutate(cond1 = strSearch({{ col1 }}, patterns[1]),
+             cond2 = strSearch({{ col2 }}, patterns[2]),
+             cond2 = ifelse(is.na(cond2), TRUE, cond2)) %>%
+      mutate(!!enquo(protocol) := cond1&cond2, .keep = "unused")
 }
 
 strSearch <- function(comm, pattern) {
@@ -48,4 +40,15 @@ strSplit <- function(str) {
   links <- bricks[seq(2, length(bricks), by = 2)]
   }
   return(list(patterns = patterns, links = links))
+}
+
+### keep a single column per protocole -----------------------------------------
+
+arrangeProtocols <- function(x, ...){
+  tmp <- x %>% 
+    select(...)
+  names <- names(tmp)
+  x %>% 
+    select(- c(...)) %>%
+    mutate(protocol = apply(tmp, 1, function(x){names[which(x)[1]]}))
 }
