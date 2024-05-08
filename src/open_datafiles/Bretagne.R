@@ -18,8 +18,7 @@ library(sf)
 #   )
 # 
 # dat <- dat %>%
-#   arrangeProtocols(IUCN, GMBPO) %>%
-#   filter(!is.na(protocol))
+#   arrangeProtocols(IUCN, GMBPO)
 
 dat <- dat %>%
   mutate(PA = jdd_nom %in% c("Données publiques de l'Inventaire Mammifères semi-aquatiques de l'Atlas 2010-14",

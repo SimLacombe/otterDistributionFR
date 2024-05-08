@@ -7,6 +7,14 @@ protocoles <- c("COLL", "CT", "KAYAK", "UICN", "OA", "ENS", "PNR", "N2000", "SBO
 
 dat <- readxl::read_xlsx(dat.filename)
 
+# dat <- dat %>%
+#   mutate(Remarques = toupper(Remarques)) %>% 
+#   addProtocol(
+#     patterns = c("PNA|PRA|POINT N|POINT X|POINTX|MAILLE|UICN|IUCN|OA|OUVRAGE|ENS BAUGÉ|COUASNON|DESGRANGES"),
+#     protocol = IUCN,
+#     col1 = Remarques
+#   )
+
 dat <- dat %>% 
   mutate(Remarques = toupper(Remarques),
          COLL = grepl("ÉCRASÉ", Remarques)|grepl("CADAVRE", Remarques),

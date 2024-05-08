@@ -2,57 +2,52 @@ library(lubridate)
 library(tidyverse)
 library(sf)
 
+source("src/functions/cleanData_fcts.R")
+
 data1.path <- "data/PNA-data/Aquitaine-SINP/Point.csv"
 data2.path <- "data/PNA-data/Aquitaine-SINP/Polygon.csv"
+
 metadata.path <- "data/PNA-data/Aquitaine-SINP/Metadonnees.csv"
 
 metadat <- read.csv(metadata.path, sep = "\t") %>%
   rename(IdJdd = IdJeuDonnees)
 
-dat1 <- read.csv(data1.path, sep = "\t") %>%
-  st_as_sf(wkt = "GeomWkt")%>%
-  left_join(metadat[, c("IdJdd", "NomJeuDonnees", "GestionnaireJdd")]) %>%
-  mutate(GestionnaireJdd = ifelse(grepl("Indépendant", GestionnaireJdd), "Indépendant", GestionnaireJdd)) %>% 
-  filter(GestionnaireJdd %in% c("Indépendant", "CD 33", "CEN Nouvelle-Aquitaine"),
-         grepl("opportuniste|naturaliste|faunistique", NomJeuDonnees),
-         !grepl("inventaire|suivi", NomJeuDonnees))
+dat <- rbind(
+  read.csv(data1.path, sep = "\t"),
+  read.csv(data2.path, sep = "\t")
+)
 
-dat2 <- read.csv(data2.path, sep = "\t") %>%
+dat <- dat %>%
   st_as_sf(wkt = "GeomWkt") %>%
-  left_join(metadat[, c("IdJdd", "NomJeuDonnees", "GestionnaireJdd")]) %>%
-  filter(GestionnaireJdd == "LPO France")
+  left_join(metadat[, c("IdJdd", "NomJeuDonnees", "GestionnaireJdd")])
 
-dat1[, c("lon.l93", "lat.l93")] <- st_coordinates(dat1)
-dat2[, c("lon.l93", "lat.l93")] <- st_coordinates(st_centroid(dat2))
+dat[, c("lon", "lat")] <- dat %>% 
+  st_centroid %>%
+  st_coordinates
 
-dat1 <- st_drop_geometry(dat1)
-dat2 <- st_drop_geometry(dat2)
+dat <- st_drop_geometry(dat)
 
-dat1 <- dat1 %>%
-  mutate(date = as.Date(DateDebut),
-         year = year(date),
-         PA = FALSE,
-         PA.protocole = NA,
-         collision = FALSE,
-         presence = 1,
-         data.provider = paste0("FAUNA - ", GestionnaireJdd),
-         CT.period = NA)%>% 
-  mutate(grid.cell = ifelse(lon.l93 >= 1000000,
-                            paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
-                            paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3)))) %>%
-  select(data.provider,PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period) 
+dat <- dat %>%
+  addProtocol(
+    patterns = c("Indépendant|CD 33|CEN Nouvelle-Aquitaine", 
+                 "opportuniste|naturaliste|faunistique_&!_inventaire|suivi"),
+    protocol = FAUNA1,
+    col1 = GestionnaireJdd,
+    col2 = NomJeuDonnees
+  ) %>%
+  addProtocol(
+    patterns = c("LPO France"),
+    protocol = FAUNA2,
+    col1 = GestionnaireJdd
+  ) %>% 
+  arrangeProtocols(FAUNA1, FAUNA2)
 
-dat2 <- dat2 %>%
-  rename(grid.cell = Maille10) %>%
-  mutate(date = as.Date(DateDebut),
-         year = year(date),
-         PA = FALSE,
-         PA.protocole = NA,
-         collision = FALSE,
-         presence = 1,
-         CT.period = NA) %>%
-  separate(NomJeuDonnees, into = c("tmp..", "data.provider", "..tmp"), sep = '\"') %>%
-  mutate(data.provider = paste0("FAUNA - ", data.provider)) %>%
-  select(data.provider,PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period)
-
-dat <- rbind(dat1, dat2)
+dat <- dat %>%
+  formatData(dataSourceStr = "FAUNA",
+             protocolCol = protocol,
+             dateCol = DateDebut,
+             presenceCond = StatPresen == "présent",
+             xCol = lon,
+             yCol = lat,
+             gridCellCol = Maille10,
+             dateformat = "%Y-%m-%d")

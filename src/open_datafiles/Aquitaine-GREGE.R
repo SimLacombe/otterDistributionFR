@@ -2,9 +2,11 @@ library(tidyverse)
 library(lubridate)
 library(sf)
 
+source("src/functions/cleanData_fcts.R")
+
 dat1.filename <- "data/PNA-data/Aquitaine-GREGE/Grege_Données LLU tot_mai2021.csv"
-etudes_transect <- c("Euskadour", "BPL", "A63 Ondres", "LGV SEA", "A65 Suivi", "A65 2014",
-                     "LGV SEA 2013", "LGV BET", "LGV BET/Euskadour")
+dat2.filename <- "data/PNA-data/Aquitaine-GREGE/Fortuites.csv"
+dat3.filename <- "data/PNA-data/Aquitaine-GREGE/Prospections_all.csv"
 
 dat1 <- read.csv(dat1.filename, sep = ";", dec = ",") %>%
   filter(PRESENCE_LLU %in% c("Positif", "Négatif"),
@@ -13,61 +15,61 @@ dat1 <- read.csv(dat1.filename, sep = ";", dec = ",") %>%
 dat1$date <- dat1$Date
 dat1[(dat1$date == ""), "date"] <- dat1[(dat1$date == ""), "DATE_"]
 
-dat1 <- dat1 %>% 
-  mutate(date = as.Date(date),
-         PA = TRUE,
-         PA.protocole = ifelse(ETUDE %in% etudes_transect, "transect", "point"),
-         collision = FALSE,
-         year = year(date),
-         presence = as.numeric(PRESENCE_LLU  == "Positif"),
-         data.provider = "GREGE",
-         CT.period = NA) %>% 
-  rename(lon.l93 = POINT_X,
-         lat.l93 = POINT_Y)
+dat1 <- dat1 %>%
+  addProtocol(
+    patterns = c("A63 Ondres|A65 Suiv|Euskadour|LGV|A65 2014|BPL"),
+    protocol = GREGETR,
+    col1 = ETUDE
+  ) %>%
+  addProtocol(
+    patterns = character(0),
+    protocol = GREGEPP
+  ) %>% 
+  arrangeProtocols(GREGETR, GREGEPP)
 
 dat1 <- dat1 %>%
-  mutate(grid.cell = ifelse(lon.l93 >= 1000000,
-                            paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
-                            paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3))))
+  formatData(dataSourceStr = "GREGE",
+             protocolCol = protocol,
+             dateCol = date,
+             presenceCond = PRESENCE_LLU  == "Positif",
+             xCol = POINT_X,
+             yCol = POINT_Y,
+             dateformat = "%Y-%m-%d") 
 
-dat1 <- dat1 %>%
-  select(data.provider,PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period) 
-
-dat2.filename <- "data/PNA-data/Aquitaine-GREGE/Fortuites.csv"
 dat2 <- read.csv(dat2.filename, sep = ";", dec = ",") %>%
-  mutate(date = as.Date(DATE_),
-         year = year(date),
-         PA = FALSE,
-         PA.protocole = NA,
-         collision = FALSE,
-         presence = 1,
-         data.provider = "GREGE",
-         CT.period = NA) %>% 
-  rename(lon.l93 = POINT_X,
-         lat.l93 = POINT_Y) %>%
-  filter(year %in% 2009:2023, NATOBS != "MOR") %>%
-  mutate(grid.cell = ifelse(lon.l93 >= 1000000,
-                            paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
-                            paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3)))) %>%
-  select(data.provider,PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period) 
+  filter(NATOBS != "MOR")
 
+dat2 <- dat2 %>%
+  addProtocol(
+    patterns = character(0),
+    protocol = GREGEPO
+  ) %>% 
+  arrangeProtocols(GREGEPO)
 
-dat3.filename <- "data/PNA-data/Aquitaine-GREGE/Prospections_all.csv"
-dat3 <- read.csv(dat3.filename, sep = ";", dec = ",") %>%
-  mutate(date = as.Date(DATE_),
-         year = year(date),
-         PA = TRUE,
-         PA.protocole = "point",
-         collision = FALSE,
-         presence = as.numeric(PRESENCE_LLU == "Positif"),
-         data.provider = "GREGE",
-         CT.period = NA) %>% 
-  rename(lon.l93 = POINT_X,
-         lat.l93 = POINT_Y) %>%
-  filter(year %in% 2009:2023) %>%
-  mutate(grid.cell = ifelse(lon.l93 >= 1000000,
-                            paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
-                            paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3)))) %>%
-  select(data.provider,PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period) 
+dat2 <- dat2 %>%
+  formatData(dataSourceStr = "GREGE",
+             protocolCol = protocol,
+             dateCol = DATE_,
+             presenceCond = 1,
+             xCol = POINT_X,
+             yCol = POINT_Y,
+             dateformat = "%Y-%m-%d") 
+  
+dat3 <- read.csv(dat3.filename, sep = ";", dec = ",")
+dat3 <- dat3 %>%
+  addProtocol(
+    patterns = character(0),
+    protocol = GREGEPP
+  ) %>% 
+  arrangeProtocols(GREGEPP)
+
+dat3 <- dat3 %>%
+  formatData(dataSourceStr = "GREGE",
+             protocolCol = protocol,
+             dateCol = DATE_,
+             presenceCond = PRESENCE_LLU == "Positif",
+             xCol = POINT_X,
+             yCol = POINT_Y,
+             dateformat = "%Y-%m-%d") 
 
 dat <- rbind(dat1, dat2, dat3)
