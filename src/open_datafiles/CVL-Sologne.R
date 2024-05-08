@@ -5,12 +5,27 @@ dat.filename <- "data/PNA-data/CentreValdeLoire-sologne-nature-environnement/Exp
 
 dat <- readxl::read_xlsx(dat.filename, skip = 1) 
 
-dat <- dat %>%
-  filter(`Type de donnée` != "publique")
+# dat <- dat %>%
+#   addProtocol(
+#     patterns = c("acquise sur fonds publics",
+#                  "2015|2019|2020|2021"),
+#     protocol = IUCN,
+#     col1 = `Type de donnée`,
+#     col2 = Date
+#   ) %>%
+#   addProtocol(
+#     patterns = c("privée|acquise sur fonds publics"),
+#     protocol = SNEPO,
+#     col1 = `Type de donnée`
+#   )
+# 
+# dat <- dat %>%
+#   arrangeProtocols(IUCN, SNEPO) %>%
+#   filter(!is.na(protocol))
 
 dat <- dat %>%
   mutate(date = as.Date(Date, format = "%d/%m/%Y"),
-         year = year(date),
+         year = year(date),  
          presence = as.numeric(`Statut obs` == "Présent"),
          data.provider = "SNE", 
          PA = `Type de donnée` == "acquise sur fonds publics" & year %in% c(2015, 2019:2021),
