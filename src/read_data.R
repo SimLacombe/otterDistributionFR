@@ -6,6 +6,8 @@ library(concom)
 
 rm(list = ls())
 
+source("src/functions/getReplicates.R")
+
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CREATE GRID ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
 # map_FR <- read_sf("data/regions-20140306-5m-shp/") %>%
@@ -74,6 +76,11 @@ rm(dat)
 
 otterDat <-  filter(otterDat,!is.na(date))
 
+### Get only required observations ---------------------------------------------
+
+otterDat <- filter(otterDat, year %in% 2009:2023,
+                   protocol != "PO"|presence)
+
 ### Get approx lat/lon for obs with missing coordinatess -----------------------
 
 otterDat[is.na(otterDat$lat), c("lon", "lat")] <-
@@ -83,41 +90,51 @@ otterDat[is.na(otterDat$lat), c("lon", "lat")] <-
   left_join(grid[, c("lon", "lat", "gridCell")], by = "gridCell") %>%
   select(lon, lat)
 
-### To spatial object ----------------------------------------------------------
-
-otterDat <-
-  st_as_sf(otterDat,
-           coords = c("lon", "lat"),
-           crs = 2154)
-
 ### Get Administrative regions -------------------------------------------------
 
-otterDat <-  st_join(otterDat, grid[, "data_region"])
+otterDat <-  left_join(otterDat, grid[, c("gridCell", "data_region")]) %>%
+  select(-geometry)
 
-### Remove redundant observations ----------------------------------------------
+### Keep only spatial replicates for the PA dataset ----------------------------
 
-otterDat <- filter(otterDat, year %in% 2009:2023,
-                    protocol != "PO"|presence)
+otterDat_pa <- otterDat %>%
+  filter(protocol != "PO")
 
-# source("src/utility_functions.R")
-# 
-# thr.space = 500
-# thr.time = 2
-#
-# otterDat.filtered.1 <- filter(otterDat, !PA)
-#
-# otterDat.filtered.2 <- otterDat %>%
-#   filter(PA) %>%
-#   group_by(year, grid.cell) %>%
-#   mutate(obs = collapse_transects(date, geometry, thr.space, thr.time)) %>%
-#   group_by(year, grid.cell, obs) %>%
-#   arrange(desc(presence)) %>%
-#   filter(row_number()==1) %>%
-#   arrange(year, grid.cell) %>%
-#   filter(obs < 6) %>%
-#   select(-obs)
-#
-# otterDat.filtered <- rbind(otterDat.filtered.1, otterDat.filtered.2)
+## 1. get site index for each observation 
+# (site = sampling unit : points are less than 500 m appart)
+
+otterDat_pa <- otterDat_pa %>%
+  group_by(protocol, gridCell, year) %>%
+  mutate(site = getSites(lon, lat, thr = 500))
+
+## 2. keep one obs per site per day 
+# (present if at least one observation is made)
+
+otterDat_pa <- otterDat_pa %>%
+  group_by(protocol, gridCell, year, site, date) %>%
+  arrange(desc(presence)) %>%
+  filter(row_number()==1)
+
+## 3. keep only one visit per site per year
+# (we randomly keep one day of observation)
+
+otterDat_pa <- otterDat_pa %>%
+  group_by(protocol, gridCell, year, site) %>%
+  slice_sample(n = 1) %>%
+  ungroup
+
+## 4. Plot
+replicates.summ <- otterDat_pa %>%
+  group_by(protocol, gridCell, year) %>%
+  summarize(n.repl = n())
+
+ggplot(replicates.summ) +
+  stat_ecdf(aes(x = n.repl, color = protocol), size = 2, show.legend = F)+
+  scale_x_continuous(breaks = 1:10, limits = c(1,10))+
+  facet_wrap(~protocol)+
+  theme_bw()
+
+mean(replicates.summ$n)
 
 ### SAVE -----------------------------------------------------------------------
 
@@ -130,12 +147,12 @@ saveRDS(otterDat, "data/otterDat.rds")
 #   st_as_sf(crs = 2154)
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PLOT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+
 otterDat_po <- otterDat %>%
   filter(protocol == "PO") %>%
   mutate(period = year %/% 4)
 
-otterDat_pa <- otterDat %>%
-  filter(protocol != "PO")%>%
+%>%
   mutate(period = year %/% 4)
 
 otterDat_pa %>%
@@ -148,13 +165,17 @@ otterDat_pa %>%
   ggplot() +
   geom_sf(data = map_FR) +
   geom_sf(aes(fill = presence)) +
-  geom_sf(data = otterDat_po, size = .25) +
+  geom_sf(data = otterDat_po %>%   st_as_sf(coords = c("lon", "lat"),
+                                            crs = 2154), size = .25) +
   scale_fill_manual(name = "",
                     values = c("orange", "darkblue")) +
   theme_bw() +
   theme(legend.position = "bottom") +
   facet_wrap( ~ paste0(period * 4, " - ", period * 4 + 3))
 
-ggplot(otterDat_pa)+
+ggplot(otterDat_pa %>% st_as_sf(coords = c("lon", "lat"),
+                             crs = 2154))+
   geom_sf(data = map_FR) +
   geom_sf(aes(col = protocol))
+
+
