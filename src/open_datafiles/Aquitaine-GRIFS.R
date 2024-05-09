@@ -39,9 +39,9 @@ dat2 <- dat2  %>%
 dat2 <- dat2 %>%
   addProtocol(
     patterns = character(0),
-    protocol = GRIFSPO
+    protocol = PO
   ) %>% 
-  arrangeProtocols(GRIFSPO) %>%
+  arrangeProtocols(PO) %>%
   formatData(dataSourceStr = "GRIFS",
              protocolCol = protocol,
              dateCol = DateDebut,

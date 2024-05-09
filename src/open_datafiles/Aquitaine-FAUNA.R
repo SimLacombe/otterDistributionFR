@@ -44,7 +44,7 @@ dat <- dat %>%
 
 dat <- dat %>%
   formatData(dataSourceStr = "FAUNA",
-             protocolCol = protocol,
+             protocolCol = "PO",
              dateCol = DateDebut,
              presenceCond = StatPresen == "présent",
              xCol = lon,

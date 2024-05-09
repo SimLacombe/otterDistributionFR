@@ -52,10 +52,10 @@ dat <- dat %>%
   ) %>%
   addProtocol(
     patterns = c("visionature"),
-    protocol = AURAPO,
+    protocol = PO,
     col1 = desc_source
   ) %>%
-  arrangeProtocols(IUCN, AURALC, AURAPL, AURAPP, AURAPCS, AURAPO)
+  arrangeProtocols(IUCN, AURALC, AURAPL, AURAPP, AURAPCS, PO)
 
 dat <- dat %>%
   formatData(dataSourceStr = "LPO-AuRA",

@@ -2,25 +2,33 @@ library(tidyverse)
 library(lubridate)
 library(sf)
 
+source("src/functions/cleanData_fcts.R")
+
 dat.filename <- "data/PNA-data/CentreValdeLoire-Caudalis/"
 
 dat <- read_sf(dat.filename)
 
-dat[, c("lon.l93", "lat.l93")] <- st_coordinates(dat)
+dat[, c("lon", "lat")] <- st_coordinates(dat)
 dat <- st_drop_geometry(dat)
 
 dat <- dat %>%
-  mutate(date = as.Date(OBS_DEBUT),
-         year = year(date),
-         presence = as.numeric(STAT_OBS == "Pr"),
-         data.provider = "Caudalis", 
-         PA = TRUE,
-         PA.protocole  = "point",
-         collision = FALSE,
-         CT.period = NA)
+  addProtocol(
+    patterns = c("SANSAULT|AUBRY"),
+    protocol = IUCN,
+    col1 = NOM_OBS
+  ) %>%
+  addProtocol(
+    patterns = character(0),
+    protocol = PO,
+    col1 = NOM_OBS
+  ) %>%
+  arrangeProtocols(IUCN, PO)
 
 dat <- dat %>%
-  mutate(grid.cell = ifelse(lon.l93 >= 1000000,
-                            paste0("E", substr(lon.l93,1,3),"N",substr(lat.l93,1,3)),
-                            paste0("E0", substr(lon.l93,1,2),"N",substr(lat.l93,1,3)))) %>% 
-  select(data.provider,PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period)
+  formatData(dataSourceStr = "Caudalis",
+             protocolCol = protocol,
+             dateCol = OBS_DEBUT,
+             presenceCond = STAT_OBS == "Pr",
+             xCol = lon,
+             yCol = lat,
+             dateformat = "%d/%m/%Y") 

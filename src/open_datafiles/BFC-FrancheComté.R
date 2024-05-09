@@ -1,20 +1,28 @@
-library(tidyverse, lubridate)
+library(tidyverse)
+library(lubridate)
+
+source("src/functions/cleanData_fcts.R")
 
 dat.filename <- "data/PNA-data/BourgogneFrancheComté-LPOBFA/Copie de Données_loutre_LPOBFC_thèse.csv"
 dat <- read.csv(dat.filename, sep = ";")
 
-dat$Remarque <- iconv(dat$Remarque, from = "ISO-8859-1", to = "UTF-8")%>%toupper
-
-dat <- dat %>% 
-  mutate(PA = (Protocole == "Protocole standard maille 10x10km adapt\xe9 \xe0 la Franche-Comt\xe9"|grepl("PRA", Remarque)), 
-         PA.protocole = ifelse(PA, "transect", NA),
-         collision = FALSE,
-         date = as.Date(Date, format = "%d/%m/%Y"),
-         presence = sign(Nombre),
-         data.provider = "LPO-BFC",
-         grid.cell = Maille,
-         year = year(date),
-         lon.l93 = NA,
-         lat.l93 = NA,
-         CT.period = NA) %>%
-  select(data.provider, PA, PA.protocole, collision, year, date, lon.l93, lat.l93, grid.cell, presence, CT.period)
+dat <- dat %>%
+  mutate(Remarque = toupper(paste0(Remarque, Protocole))) %>%
+  filterCamTrap(col = Remarque) %>%
+  addProtocol(
+    patterns = c("PRA|PROTOCOLE STANDARD"),
+    protocol = IUCN,
+    col1 = Remarque) %>% 
+  addProtocol(
+    patterns = character(0),
+    protocol = PO,
+    col1 = Remarque) %>%
+  arrangeProtocols(IUCN, PO) %>%
+  formatData(
+    dataSourceStr = "LPO-BFC",
+    protocolCol = protocol,
+    dateCol = Date,
+    presenceCond = sign(Nombre),
+    gridCellCol = Maille,
+    dateformat = "%d/%m/%Y"
+  )

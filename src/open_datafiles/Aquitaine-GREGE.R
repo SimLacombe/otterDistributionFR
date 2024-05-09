@@ -18,14 +18,14 @@ dat1[(dat1$date == ""), "date"] <- dat1[(dat1$date == ""), "DATE_"]
 dat1 <- dat1 %>%
   addProtocol(
     patterns = c("A63 Ondres|A65 Suiv|Euskadour|LGV|A65 2014|BPL"),
-    protocol = GREGETR,
+    protocol = IUCN,
     col1 = ETUDE
   ) %>%
   addProtocol(
     patterns = character(0),
     protocol = GREGEPP
   ) %>% 
-  arrangeProtocols(GREGETR, GREGEPP)
+  arrangeProtocols(IUCN, GREGEPP)
 
 dat1 <- dat1 %>%
   formatData(dataSourceStr = "GREGE",
@@ -42,9 +42,9 @@ dat2 <- read.csv(dat2.filename, sep = ";", dec = ",") %>%
 dat2 <- dat2 %>%
   addProtocol(
     patterns = character(0),
-    protocol = GREGEPO
+    protocol = PO
   ) %>% 
-  arrangeProtocols(GREGEPO)
+  arrangeProtocols(PO)
 
 dat2 <- dat2 %>%
   formatData(dataSourceStr = "GREGE",

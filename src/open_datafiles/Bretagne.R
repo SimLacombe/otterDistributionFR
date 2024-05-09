@@ -2,6 +2,8 @@ library(tidyverse)
 library(lubridate)
 library(sf)
 
+source("src/functions/cleanData_fcts.R")
+
 dat.filename <- "data/PNA-DATA/Bretagne-GMB/Data_Lutra_GMB.csv"
 dat <- read.csv(dat.filename, sep = ";")
 
@@ -19,10 +21,10 @@ dat <- dat %>%
   ) %>%
   addProtocol(
     patterns = c("Données opportunistes|Données faunebretagne"),
-    protocol = GMBPO,
+    protocol = PO,
     col1 = jdd_nom
   )%>%
-  arrangeProtocols(IUCN, GMBPO)
+  arrangeProtocols(IUCN, PO)
 
 
 dat <- dat %>%
