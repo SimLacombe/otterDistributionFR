@@ -49,5 +49,4 @@ dat <- dat %>%
              presenceCond = StatPresen == "présent",
              xCol = lon,
              yCol = lat,
-             gridCellCol = Maille10,
              dateformat = "%Y-%m-%d")

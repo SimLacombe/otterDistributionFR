@@ -62,17 +62,18 @@ map_FR <- readRDS("data/map_fr.rds") %>%
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Load data ------------------------------------------------------------------
 
+usefull_envt <- c(ls(), "otterDat")
+
 src.path <- "src/open_datafiles"
 
 otterDat <-
   foreach(src = list.files(src.path, full.names = TRUE),
           .combine = rbind) %do% {
             source(src)
-            rm(list = setdiff(ls(), c("dat", "src.path", "grid", "grid2", "map_FR")))
             dat
           }
 
-rm(dat)
+rm(list = setdiff(ls(), usefull_envt))
 
 otterDat <-  filter(otterDat,!is.na(date))
 
@@ -95,38 +96,64 @@ otterDat[is.na(otterDat$lat), c("lon", "lat")] <-
 otterDat <-  left_join(otterDat, grid[, c("gridCell", "data_region")]) %>%
   select(-geometry)
 
-### Keep only spatial replicates for the PA dataset ----------------------------
+### filter redundant observations ----------------------------------------------
 
-otterDat_pa <- otterDat %>%
-  filter(protocol != "PO")
+# We keep only spatial replicates for the PA dataset
+# For the PO dataset, we keep one observation per day per sampling site
 
 ## 1. get site index for each observation 
 # (site = sampling unit : points are less than 500 m appart)
 
-otterDat_pa <- otterDat_pa %>%
+otterDat <- otterDat %>%
   group_by(protocol, gridCell, year) %>%
   mutate(site = getSites(lon, lat, thr = 500))
 
 ## 2. keep one obs per site per day 
 # (present if at least one observation is made)
 
-otterDat_pa <- otterDat_pa %>%
+otterDat <- otterDat %>%
   group_by(protocol, gridCell, year, site, date) %>%
   arrange(desc(presence)) %>%
-  filter(row_number()==1)
+  filter(row_number()==1|dataSource %in% c("SHNA-OFAB", "LPO-BFC"))
 
 ## 3. keep only one visit per site per year
 # (we randomly keep one day of observation)
+
+otterDat_pa <- otterDat %>%
+  filter(protocol != "PO",
+         !dataSource %in% c("SHNA-OFAB", "LPO-BFC"))
+otterDat_po <- otterDat %>%
+  filter(protocol == "PO",
+         !dataSource %in% c("SHNA-OFAB", "LPO-BFC"))
+otterDat_BFC <- otterDat %>%
+  filter(dataSource %in% c("SHNA-OFAB", "LPO-BFC"))
 
 otterDat_pa <- otterDat_pa %>%
   group_by(protocol, gridCell, year, site) %>%
   slice_sample(n = 1) %>%
   ungroup
 
+otterDat <- rbind(otterDat_pa, otterDat_BFC, otterDat_po) %>%
+  select(dataSource, protocol, date, year, presence, lon, lat, gridCell) %>% 
+  arrange(dataSource, protocol, date, year)
+
+rm(otterDat_pa, otterDat_po, otterDat_BFC)
+
 ## 4. Plot
-replicates.summ <- otterDat_pa %>%
+
+PO.summ <- otterDat %>%
+  filter(protocol == "PO") %>%
   group_by(protocol, gridCell, year) %>%
-  summarize(n.repl = n())
+  summarize(n.repl = n()) %>%
+  left_join(grid[, c("geometry", "gridCell")], by = "gridCell")%>%
+  st_as_sf 
+  
+replicates.summ <- otterDat %>%
+  filter(protocol != "PO") %>%
+  group_by(protocol, gridCell, year) %>%
+  summarize(n.repl = n()) %>%
+  left_join(grid[, c("geometry", "gridCell")], by = "gridCell")%>%
+  st_as_sf 
 
 ggplot(replicates.summ) +
   stat_ecdf(aes(x = n.repl, color = protocol), size = 2, show.legend = F)+
@@ -134,28 +161,29 @@ ggplot(replicates.summ) +
   facet_wrap(~protocol)+
   theme_bw()
 
-mean(replicates.summ$n)
+ggplot(replicates.summ)+
+  geom_sf(data = map_FR) +
+  geom_sf(aes(fill = n.repl)) + 
+  scale_fill_gradient2(
+    low = "white",
+    high = "red"
+  ) + 
+  facet_wrap(~year)+
+  theme_bw()
 
 ### SAVE -----------------------------------------------------------------------
 
 saveRDS(otterDat, "data/otterDat.rds")
-# saveRDS(otterDat.filtered, "data/otterDatFiltered.rds")
 
-# otterDat.filtered <- readRDS("data/otterDatFiltered.rds") %>%
-#   st_as_sf(crs = 2154)
-# otterDat <- readRDS("data/otterDat.rds") %>%
-#   st_as_sf(crs = 2154)
-
+# otterDat <- readRDS("data/otterDat.rds")
+ 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PLOT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
-otterDat_po <- otterDat %>%
-  filter(protocol == "PO") %>%
+otterDat <- otterDat %>%
   mutate(period = year %/% 4)
 
-%>%
-  mutate(period = year %/% 4)
-
-otterDat_pa %>%
+otterDat %>%
+  filter(protocol != "PO") %>% 
   st_drop_geometry() %>%
   group_by(period, gridCell) %>%
   summarize(presence = any(as.logical(presence)),
@@ -165,17 +193,16 @@ otterDat_pa %>%
   ggplot() +
   geom_sf(data = map_FR) +
   geom_sf(aes(fill = presence)) +
-  geom_sf(data = otterDat_po %>%   st_as_sf(coords = c("lon", "lat"),
-                                            crs = 2154), size = .25) +
-  scale_fill_manual(name = "",
-                    values = c("orange", "darkblue")) +
+  geom_sf(data = otterDat %>% 
+            filter(protocol == "PO") %>% 
+            st_as_sf(coords = c("lon", "lat"),crs = 2154), aes(color = protocol), size = .25) +
+  scale_fill_manual(name = "Standardized data",
+                    values = c("orange", "darkblue"),
+                    labels = c("Unobserved", "present")) +
+  scale_color_manual("Opportunistic data", values = "black", label = "present") +
   theme_bw() +
   theme(legend.position = "bottom") +
+  guides(colour = guide_legend(title.position="top", title.hjust = 0.5),
+         fill = guide_legend(title.position="top", title.hjust = 0.5))+
   facet_wrap( ~ paste0(period * 4, " - ", period * 4 + 3))
-
-ggplot(otterDat_pa %>% st_as_sf(coords = c("lon", "lat"),
-                             crs = 2154))+
-  geom_sf(data = map_FR) +
-  geom_sf(aes(col = protocol))
-
-
+  # facet_wrap( ~ year)
