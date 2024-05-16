@@ -1,5 +1,4 @@
 library(tidyverse)
-library(foreach)
 library(sf)
 
 library(LaplacesDemon)
