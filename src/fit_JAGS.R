@@ -53,16 +53,9 @@ paDat <- otterDat %>%
     y = sum(presence)
   ) %>%
   ungroup %>%
-  mutate(protocol.fact = as.numeric(as.factor(protocol))) %>%
+  mutate(protocol.fact = as.numeric(as.factor(protocol)),
+         pixel = pmatch(gridCell, L93_grid$gridCell, duplicates.ok = TRUE)) %>%
   arrange(period)
-
-paDat$pixel <-
-  sapply(
-    paDat$gridCell,
-    FUN = function(x) {
-      which(L93_grid$gridCell == x)
-    }
-  )
 
 npa <- unname(c(table(paDat$period)))
 
@@ -74,15 +67,9 @@ poDat <- otterDat %>%
   filter(protocol  == "PO",
          gridCell %in% L93_grid$gridCell) %>%
   select(period, gridCell) %>%
+  mutate(pixel = pmatch(gridCell, L93_grid$gridCell, duplicates.ok = TRUE)) %>% 
   arrange(period)
 
-poDat$pixel <-
-  sapply(
-    poDat$gridCell,
-    FUN = function(x) {
-      which(L93_grid$gridCell == x)
-    }
-  )
 poDat$ones <- 1
 
 npo <- unname(c(table(poDat$period)))
