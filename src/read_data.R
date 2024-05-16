@@ -18,17 +18,17 @@ source("src/functions/getReplicates.R")
 #   rmapshaper::ms_simplify() %>%
 #   st_transform(crs = 2154)
 # 
-# insee_to_dataRegion <- data.frame(code_insee = c("42", "72", "83", "25", "26", "53",
+# insee_to_region <- data.frame(code_insee = c("42", "72", "83", "25", "26", "53",
 #                                                  "24", "21", "43", "23", "11", "91",
 #                                                  "74", "41", "73", "31", "52", "22",
 #                                                  "54", "93", "82"),
-#                                   data_region = c("noDat", "Aq", "Au", "No", "Bo", "Br", "Cvl",
+#                                   region = c("noDat", "Aq", "Au", "No", "Bo", "Br", "Cvl",
 #                                                   "noDat", "FC", "No", "noDat", "Oc", "Li", "noDat", "Oc",
 #                                                   "noDat", "PdL", "noDat", "PoCha", "PACA", "RA"))
 # 
 # map_FR <- map_FR %>%
-#   left_join(insee_to_dataRegion, by = "code_insee") %>%
-#   group_by(data_region) %>%
+#   left_join(insee_to_region, by = "code_insee") %>%
+#   group_by(region) %>%
 #   summarize()
 # 
 # grid <- st_make_grid(map_FR, crs = 2154,
@@ -42,8 +42,8 @@ source("src/functions/getReplicates.R")
 #   mutate(gridCell = ifelse(lon >= 1000000,
 #                            paste0("E", substr(lon,1,3),"N",substr(lat,1,3)),
 #                            paste0("E0", substr(lon,1,2),"N",substr(lat,1,3)))) %>%
-#   st_join(map_FR[, "data_region"], largest = TRUE) %>%
-#   filter(!is.na(data_region))
+#   st_join(map_FR[, "region"], largest = TRUE) %>%
+#   filter(!is.na(region))
 # 
 # grid2 <- grid %>%
 #   st_intersection(st_union(map_FR))
@@ -93,7 +93,7 @@ otterDat[is.na(otterDat$lat), c("lon", "lat")] <-
 
 ### Get Administrative regions -------------------------------------------------
 
-otterDat <-  left_join(otterDat, grid[, c("gridCell", "data_region")]) %>%
+otterDat <-  left_join(otterDat, grid[, c("gridCell", "region")]) %>%
   select(-geometry)
 
 ### filter redundant observations ----------------------------------------------
@@ -134,8 +134,8 @@ otterDat_pa <- otterDat_pa %>%
   ungroup
 
 otterDat <- rbind(otterDat_pa, otterDat_BFC, otterDat_po) %>%
-  select(dataSource, protocol, date, year, presence, lon, lat, gridCell) %>% 
-  arrange(dataSource, protocol, date, year)
+  select(region, dataSource, protocol, year, date, presence, lon, lat, gridCell) %>% 
+  arrange(dataSource, protocol, year, date)
 
 rm(otterDat_pa, otterDat_po, otterDat_BFC)
 

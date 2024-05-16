@@ -63,8 +63,9 @@ model{
     for(t in 1:nyear){
       logit(thin_prob[pixel, t]) <- inprod(x_thin[pixel,], beta_thin) + beta_region[region[pixel], t]
     }
-    logit(rho[pixel, 1]) <-inprod(x_rho[pixel, ], beta_rho)
-    logit(rho[pixel, 2]) <-inprod(x_rho[pixel, ], beta_rho) + beta_rho_point
+    for(protocol in 1:nprotocols){
+      logit(rho[pixel, protocol]) <-inprod(x_rho[pixel, ], beta_rho) + beta_rho_protocol[protocol]
+    }
   }
   
   ## GAM ##
@@ -86,6 +87,10 @@ model{
     }
   }
   
+  for(protocol in 1:nprotocols){
+    beta_rho_protocol[protocol] ~ dnorm(0, 1/(sigma_protocol*sigma_protocol))
+  }
+  
   ## PRIORS ##
   for(cov in 1:ncov_lam){
     beta_latent[cov] ~ dnorm(0, 0.01)
@@ -95,10 +100,10 @@ model{
   }
   for(cov in 1:ncov_rho){
     beta_rho[cov] ~ dlogis(0, 1)
-    beta_rho_point[cov] ~ dlogis(0, 1)
   }
 
   sigma_region ~ dunif(0,100)
+  sigma_protocol ~ dunif(0,100)
   
   lambda_gam ~ dgamma(.05,.005)
   tau_gam ~ dgamma(1,1)
