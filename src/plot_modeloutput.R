@@ -1,12 +1,79 @@
 library(tidyverse)
+library(sf)
+library(mgcv)
 
-path <-"outMod/2024-05-16_ISDM_Br.PdL.No_4yrs.rds"
-  paste0("outMod/",
-         paste(Sys.Date(), MOD, paste(REGIONS, collapse = "."), TIMEPERIOD,
-               sep = "_"),
-         "yrs.rds")
+rm(list = ls())
+
+path <-"out/2024-05-28_Aq.Au.Bo.Br.Cvl.FC.Li.NE.No.Oc.PACA.PdL.PoCha.RA_3yrs.rds"
   
 out <- readRDS(path)
+
+REGIONS <- c("Aq", "Au", "Bo", "Br", "Cvl", "FC", "Li", "No", "NE", "Oc", "PACA",
+             "PdL", "PoCha", "RA")
+
+TIMEPERIOD <- 3 #years
+
+TIMELAG <- TIMEPERIOD - 2009 %% TIMEPERIOD
+
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA AND COVS ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+### Load data ------------------------------------------------------------------
+
+data.filename <- "data/otterDat.rds"
+grid.filename <- "data/L9310x10grid.rds"
+map.filename <- "data/map_fr.rds"
+
+otterDat <- readRDS(data.filename)
+
+L93_grid <- readRDS(grid.filename) %>%
+  st_as_sf(crs = 2154)
+
+map <- readRDS(map.filename) %>%
+  st_as_sf(crs = 2154)
+
+### Filter the region of interest ----------------------------------------------
+
+otterDat <- filter(otterDat, region %in% REGIONS)
+L93_grid <- filter(L93_grid, region %in% REGIONS)
+
+### Get offset and spatial covariates ------------------------------------------
+
+L93_grid$intercept <- 1
+L93_grid$logArea <- log(as.numeric(st_area(L93_grid)) / 1000 ** 2)
+
+### Get primary period ---------------------------------------------------------
+
+otterDat$period <- (otterDat$year + TIMELAG) %/% TIMEPERIOD
+
+nperiod <- length(unique(otterDat$period))
+
+### GAM Data -------------------------------------------------------------------
+
+NSPLINES = 10
+
+jags.file <- "src/JAGS/test.jags"
+
+tmpDat <- L93_grid %>%
+  st_centroid() %>%
+  st_transform(crs = 4326) %>%
+  st_coordinates() %>%
+  data.frame(1, .)
+
+names(tmpDat) <- c("y", "E", "N")
+
+gamDat <- jagam(
+  y ~ s(
+    E,
+    N,
+    k = NSPLINES,
+    bs = "ds",
+    m = c(1, 0.5)
+  ),
+  data = tmpDat,
+  file = jags.file,
+  family = "binomial"
+)
+
+gamDat$jags.ini$b[1] <- -4.6 #log area of cells
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PLOT OUTPUT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Occupied cells -------------------------------------------------------------
@@ -24,14 +91,14 @@ rm("zzz", "zz")
 z.df <- data.frame(
   gridCell = rep(L93_grid$gridCell, nperiod),
   meanz = c(z[, 1:nperiod]),
-  period = rep(unique(poDat$period), each = nrow(z))
+  period = rep(unique(otterDat$period), each = nrow(z))
 ) %>%
   left_join(L93_grid, .) %>%
-  mutate(period = paste0(period * TIMEPERIOD, " - ", period * TIMEPERIOD + TIMEPERIOD -
+  mutate(period = paste0(period * TIMEPERIOD - TIMELAG, " - ", period * TIMEPERIOD - TIMELAG + TIMEPERIOD -
                            1))
 
 z.df$z.occupied <-
-  ifelse(z.df$meanz > 0.25, "OCCUPIED", "UNOCCUPIED")
+  ifelse(z.df$meanz > 0.50, "OCCUPIED", "UNOCCUPIED")
 
 ### Psi ------------------------------------------------------------------------
 
@@ -62,19 +129,22 @@ latent.df <-
   data.frame(
     gridCell = rep(L93_grid$gridCell, nperiod),
     psi = 1 - exp(-c(l)),
-    period = rep(unique(poDat$period), each = nrow(l))
+    period = rep(sort(unique(otterDat$period)), each = nrow(l))
   ) %>%
   left_join(L93_grid, .) %>%
-  mutate(period = paste0(period * TIMEPERIOD, " - ", period * TIMEPERIOD + TIMEPERIOD -
-                           1))
+  mutate(period = paste0(period * TIMEPERIOD - TIMELAG, " - ", period * TIMEPERIOD - TIMELAG + TIMEPERIOD -
+                           1)) %>% 
+  group_by(gridCell) %>% 
+  mutate(dpsi = psi-lag(psi)) %>%
+  ungroup()
 
 latent.df.peryear <- data.frame(
-  period = unique(poDat$period),
+  period = sort(unique(otterDat$period)),
   psi.inf = 1 - exp(-sum.l[1, ]),
   psi.med = 1 - exp(-sum.l[2, ]),
   psi.sup = 1 - exp(-sum.l[3, ])
 ) %>%
-  mutate(period = paste0(period * TIMEPERIOD, " - ", period * TIMEPERIOD + TIMEPERIOD -
+  mutate(period = paste0(period * TIMEPERIOD - TIMELAG, " - ", period * TIMEPERIOD - TIMELAG + TIMEPERIOD -
                            1))
 
 ### Region x year --------------------------------------------------------------
@@ -90,36 +160,20 @@ sum.beta_reg <-
   )
 beta_reg.df <-
   data.frame(
-    period = rep(unique(poDat$period), each = length(unique(REGIONS))),
+    period = rep(sort(unique(otterDat$period)), each = length(unique(REGIONS))),
     region = rep(unique(REGIONS), nperiod),
     beta_reg.inf = sum.beta_reg[1, ],
     beta_reg.med = sum.beta_reg[2, ],
     beta_reg.sup = sum.beta_reg[3, ]
   ) %>%
-  mutate(period = paste0(period * TIMEPERIOD, " - ", period * TIMEPERIOD + TIMEPERIOD -
+  mutate(period = paste0(period * TIMEPERIOD - TIMELAG, " - ", period * TIMEPERIOD - TIMELAG + TIMEPERIOD -
                            1))
 
 ### Plots ----------------------------------------------------------------------
 
-otterDat.toplot <- otterDat %>%
-  mutate(
-    dataType = ifelse(
-      protocol != "PO" & as.logical(presence),
-      "PA - presence",
-      ifelse(protocol != "PO", "PA - absence", "PO")
-    ),
-    period = paste0(period * TIMEPERIOD, " - ", period * TIMEPERIOD + TIMEPERIOD -
-                      1)
-  ) %>% 
-  st_as_sf(coords = c("lon", "lat"), crs = 2154)
-
 ggplot() +
-  geom_sf(data = latent.df, aes(fill = psi), alpha = .85) +
-  geom_sf(data = otterDat.toplot,
-          aes(color = dataType),
-          alpha = .5,
-          size = .6) +
-  scale_color_manual(values = c("red", "blue", "black")) +
+  geom_sf(data = latent.df, aes(fill = psi), col = NA, alpha = .85) +
+  geom_sf(data = map, fill = "transparent")+
   scale_fill_gradient2(
     low = "white",
     mid = "orange",
@@ -130,12 +184,19 @@ ggplot() +
   theme_bw()
 
 ggplot() +
+  geom_sf(data = latent.df, aes(fill = dpsi), col = NA, alpha = .85) +
+  geom_sf(data = map, fill = "transparent")+
+  scale_fill_gradient2(
+    low = "red",
+    mid = "white",
+    high = "green",
+    midpoint = 0
+  ) +
+  facet_wrap( ~ period) +
+  theme_bw()
+
+ggplot() +
   geom_sf(data = z.df, aes(fill = z.occupied), alpha = .85) +
-  geom_sf(data = otterDat.toplot,
-          aes(color = dataType),
-          alpha = .5,
-          size = .6) +
-  scale_color_manual(values = c("red", "blue", "black")) +
   scale_fill_manual(values = c("orange", "white")) +
   facet_wrap( ~ period) +
   theme_bw()
