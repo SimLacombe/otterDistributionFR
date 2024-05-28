@@ -1,26 +1,27 @@
 library(tidyverse)
 library(sf)
+library(foreach)
+library(mgcv)
 
-library(LaplacesDemon)
-library(runjags)
 library(rjags)
 library(coda)
-library(mgcv)
 
 rm(list = ls())
 
 source("src/functions/jags_ini.R")
 
-MOD <- "ISDM"
-REGIONS <- c("Br", "PdL", "No")
-TIMEPERIOD <- 4 #years
+REGIONS <- c("Aq", "Au", "Bo", "Br", "Cvl", "FC", "Li", "No", "Oc", "PACA",
+             "PdL", "PoCha", "RA")
+
+TIMEPERIOD <- 3 #years
+
+TIMELAG <- TIMEPERIOD - 2009 %% TIMEPERIOD
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA AND COVS ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Load data ------------------------------------------------------------------
 
 data.filename <- "data/otterDat.rds"
 grid.filename <- "data/L9310x10grid.rds"
-# grid.filename <- "data/L9310x10grid_KDE.rds"
 
 otterDat <- readRDS(data.filename)
 
@@ -39,7 +40,7 @@ L93_grid$logArea <- log(as.numeric(st_area(L93_grid)) / 1000 ** 2)
 
 ### Get primary period ---------------------------------------------------------
 
-otterDat$period <- otterDat$year %/% TIMEPERIOD
+otterDat$period <- (otterDat$year + TIMELAG) %/% TIMEPERIOD
 # otterDat$period <- 1
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~ FORMAT DATA FOR JAGS ~~~~~~~~~~~~~~~~~~~~~~~~ ###
@@ -148,8 +149,8 @@ inits <- foreach(i = 1:4) %do% {
 
 N.CHAINS = 4
 
-ADAPT = 500
-BURNIN = 1000
+ADAPT = 1000
+BURNIN = 2000
 SAMPLE = 1000
 THIN = 1
 
@@ -157,11 +158,20 @@ THIN = 1
 
 ## Integrated Species Distribution Model (PA + PO) ##
 
- if(MOD == "ISDM"){
-mod <- run.jags(
-  model = "src/JAGS/intSDMgam_JAGSmod.R",
-  monitor = c(
+mod <- jags.model(
+  file = "src/JAGS/IntSDMgam_JAGSmod.R",
+  data = data.list,
+  inits = inits,
+  n.chains = N.CHAINS,
+  n.adapt = ADAPT)
+
+update(mod, BURNIN)
+
+mcmc <- coda.samples(
+  mod,
+  variable.names = c(
     "z",
+    "b",
     "beta_region",
     "beta_latent",
     "beta_rho",
@@ -169,39 +179,15 @@ mod <- run.jags(
     "beta_thin",
     "lambda_gam"
   ),
-  data = data.list,
-  inits = inits,
-  n.chains = N.CHAINS,
-  adapt = ADAPT,
-  burnin = BURNIN,
-  sample = SAMPLE,
-  thin = THIN,
-  summarise = TRUE,
-  plots = TRUE,
-  method = "parallel"
-)}
+  n.iter = SAMPLE,
+  thin = THIN
+)
 
-## Occupancy Model (PA) ##
-
-if(MOD == "occu"){
-mod <- run.jags(model = "src/JAGS/occu.R",
-                monitor = c("z","psi", "beta_latent", "beta_rho", "lambda_gam"),
-                data = data.list,
-                inits = inits,
-                n.chains = N.CHAINS,
-                adapt = ADAPT,
-                burnin = BURNIN,
-                sample = SAMPLE,
-                thin = THIN,
-                summarise = TRUE,
-                plots = TRUE,
-                method = "parallel")}
-
-out <- as.matrix(as.mcmc.list(mod), chains = T)
+out <- as.matrix(as.mcmc.list(mcmc), chains = T)
 
 outpath <-
-  paste0("outMod/",
-         paste(Sys.Date(), MOD, paste(REGIONS, collapse = "."), TIMEPERIOD,
+  paste0("out/",
+         paste(Sys.Date(), paste(REGIONS, collapse = "."), TIMEPERIOD,
                sep = "_"),
          "yrs.rds")
 saveRDS(out, outpath)
