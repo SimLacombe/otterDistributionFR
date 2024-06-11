@@ -29,6 +29,7 @@ dat <- dat %>%
 dat <- dat %>%
   formatData(dataSourceStr = "MNE",
              protocolCol = protocol,
+             observerCol = observateu,
              dateCol = date_jour,
              presenceCond = is_present > 0,
              xCol = lon,

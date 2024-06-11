@@ -20,6 +20,7 @@ dat <- dat %>%
   arrangeProtocols(IUCN, PO) %>%
   formatData(
     dataSourceStr = "LPO-BFC",
+    observerCol = "",
     protocolCol = protocol,
     dateCol = Date,
     presenceCond = sign(Nombre),

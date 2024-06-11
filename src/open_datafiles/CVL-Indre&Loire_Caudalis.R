@@ -26,6 +26,7 @@ dat <- dat %>%
 
 dat <- dat %>%
   formatData(dataSourceStr = "Caudalis",
+             observerCol = NOM_OBS,
              protocolCol = protocol,
              dateCol = OBS_DEBUT,
              presenceCond = STAT_OBS == "Pr",

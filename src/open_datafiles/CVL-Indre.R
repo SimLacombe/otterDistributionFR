@@ -12,10 +12,11 @@ dat <- dat %>%
   filterCamTrap(toupper(Prospection)) %>%
   filter(`Cause mort` != "Collision routière") %>%
   formatData(dataSourceStr = "Indre-Nature",
+             observerCol = str_split_i(Observateur, ",", 1),
              protocolCol = "PO",
              dateCol = Date,
              presenceCond = `Statut obs` == "Présent",
-             xCol = `x Lambert93`,
-             yCol = `y Lambert93`,
+             xCol = as.numeric(`x Lambert93`),
+             yCol = as.numeric(`y Lambert93`),
              dateformat = "%d/%m/%Y")
 

@@ -36,6 +36,7 @@ dat1 <- dat1 %>%
   arrangeProtocols(OFABPP, IUCN, PO) %>%
   formatData(
     dataSourceStr = "SHNA-OFAB",
+    observerCol = str_split_i(str_split_i(OBSERVATEUR, ",", 1), "/", 1),
     protocolCol = protocol,
     dateCol = DATE_OBS,
     presenceCond = EMPREINTES == "VRAI" | CROTTES == "VRAI",
@@ -61,6 +62,7 @@ dat2 <- dat2 %>%
   arrangeProtocols(IUCN, OFABPP, PO) %>%
   formatData(
     dataSourceStr = "SHNA-OFAB",
+    observerCol = str_split_i(str_split_i(OBSERVATEUR, ",", 1), "/", 1),
     protocolCol = protocol,
     dateCol = DATE_OBS,
     presenceCond = VIVANT == "VRAI" |

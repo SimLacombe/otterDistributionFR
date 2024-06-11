@@ -28,6 +28,7 @@ dat <- dat %>%
 
 dat <- dat %>%
   formatData(dataSourceStr = "GMN",
+             observerCol = "",
              protocolCol = protocol,
              dateCol = Date.observation,
              presenceCond = Comportement.N.1 != "0001/Absence d'indice",

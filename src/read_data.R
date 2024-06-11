@@ -62,7 +62,7 @@ map_FR <- readRDS("data/map_fr.rds") %>%
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Load data ------------------------------------------------------------------
 
-usefull_envt <- c(ls(), "otterDat")
+envt <- c(ls(), "otterDat")
 
 src.path <- "src/open_datafiles"
 
@@ -73,7 +73,7 @@ otterDat <-
             dat
           }
 
-rm(list = setdiff(ls(), usefull_envt))
+rm(list = setdiff(ls(), envt))
 
 otterDat <-  filter(otterDat,!is.na(date))
 
@@ -95,6 +95,14 @@ otterDat[is.na(otterDat$lat), c("lon", "lat")] <-
 
 otterDat <-  left_join(otterDat, grid[, c("gridCell", "region")]) %>%
   select(-geometry)
+
+### Indicate when observer name is missing -------------------------------------
+
+otterDat <- otterDat %>% 
+  mutate(observer = ifelse(grepl("trans.|Anonyme", observer)|observer == ""|is.na(observer),
+                           "unknown",
+                           observer))
+  
 
 ### filter redundant observations ----------------------------------------------
 
@@ -134,7 +142,7 @@ otterDat_pa <- otterDat_pa %>%
   ungroup
 
 otterDat <- rbind(otterDat_pa, otterDat_BFC, otterDat_po) %>%
-  select(region, dataSource, protocol, year, date, presence, lon, lat, gridCell) %>% 
+  select(region, dataSource, observer, protocol, year, date, presence, lon, lat, gridCell) %>% 
   arrange(dataSource, protocol, year, date)
 
 rm(otterDat_pa, otterDat_po, otterDat_BFC)

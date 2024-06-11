@@ -15,6 +15,7 @@ rm(dat.sf)
 dat <- dat %>%
   mutate(comment = paste0(toupper(comment), " ", toupper(comment_priv))) %>%
   filterCamTrap(col = comment) %>%
+  filter(is.na(mortalite_cause)|mortalite_cause != "ROAD_VEHICLE") %>%
   addProtocol(
     patterns = c("visionature",
                  "IUCN|UICN|PROTOCOL|PRA LOUTRE"),
@@ -60,6 +61,7 @@ dat <- dat %>%
 dat <- dat %>%
   formatData(dataSourceStr = "LPO-AuRA",
              protocolCol = protocol,
+             observerCol = "",
              dateCol = date,
              presenceCond = is_present,
              xCol = lon,

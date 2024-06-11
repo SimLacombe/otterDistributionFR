@@ -31,6 +31,7 @@ dat <- dat %>%
 
 dat <- dat %>%
   formatData(dataSourceStr = "LPO-PACA",
+             observerCol = paste(SURNAME, NAME),
              protocolCol = protocol,
              dateCol = DATE,
              presenceCond = TOTAL_COUNT > 0,

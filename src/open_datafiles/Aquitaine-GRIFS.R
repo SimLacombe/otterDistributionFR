@@ -10,13 +10,9 @@ dat2.filename <- "data/PNA-data/Aquitaine-GRIFS/GRIFS_Point_Loutre_202112-202301
 dat1 <- read.csv(dat1.filename)
 
 dat1 <- dat1 %>%
-  addProtocol(
-    patterns = character(0),
-    protocol = GRIFSPP
-  ) %>% 
-  arrangeProtocols(GRIFSPP) %>%
   formatData(dataSourceStr = "GRIFS",
-             protocolCol = protocol,
+             protocolCol = "GRIFSPP",
+             observerCol = "",
              dateCol = date,
              presenceCond = presence == 1 &! is.na(presence),
              xCol = lon,
@@ -37,13 +33,9 @@ dat2 <- dat2  %>%
   ungroup
 
 dat2 <- dat2 %>%
-  addProtocol(
-    patterns = character(0),
-    protocol = PO
-  ) %>% 
-  arrangeProtocols(PO) %>%
   formatData(dataSourceStr = "GRIFS",
-             protocolCol = protocol,
+             observerCol = str_split_i(Observer, "\\(", 1),
+             protocolCol = "PO",
              dateCol = DateDebut,
              presenceCond = StatPresen=="présent",
              xCol = lon,

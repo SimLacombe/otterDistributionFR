@@ -13,6 +13,7 @@ dat <- dat%>%
   filterCamTrap(toupper(Remarque)) %>%
   filter(`Contient des détails mortalité` != "Oui") %>%
   formatData(dataSourceStr = "GMHL",
+             observerCol = paste(Nom, Prénom),
              protocolCol = "PO",
              dateCol = Date,
              presenceCond = Nombre > 0,

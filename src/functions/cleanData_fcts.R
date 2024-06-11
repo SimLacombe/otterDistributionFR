@@ -73,6 +73,7 @@ filterCamTrap <- function(x, col,
 
 formatData <- function(x,
                        dataSourceStr,
+                       observerCol,
                        protocolCol,
                        dateCol,
                        presenceCond,
@@ -83,6 +84,7 @@ formatData <- function(x,
   x <- x %>%
     mutate(
       dataSource = dataSourceStr,
+      observer = {{ observerCol }},
       protocol = {{ protocolCol }},
       date = as.Date({{ dateCol }}, format = dateformat),
       year = year(date),
@@ -100,7 +102,7 @@ formatData <- function(x,
       ))
   }
   x %>%
-    select(dataSource, protocol, date, year, presence, lon, lat, gridCell)
+    select(dataSource, observer, protocol, date, year, presence, lon, lat, gridCell)
 }
 
 

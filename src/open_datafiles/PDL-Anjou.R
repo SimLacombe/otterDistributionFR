@@ -37,6 +37,7 @@ dat <- dat %>%
 dat <- dat %>%
   formatData(dataSourceStr = "LPO-Anjou",
              protocolCol = protocol,
+             observerCol = paste(Nom, Prénom),
              dateCol = Date,
              presenceCond = Nombre > 0,
              xCol = `X Lambert93 [m]`,

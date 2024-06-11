@@ -29,6 +29,10 @@ dat <- dat %>%
 
 dat <- dat %>%
   formatData(dataSourceStr = "GMB",
+             observerCol = ifelse(protocol == "PO", ifelse(grepl(" - ", jdd_nom),
+                                                           str_split_i(jdd_nom, " - ", 2),
+                                                           str_split_i(jdd_nom, " de ", 2)),
+                                  NA),
              protocolCol = protocol,
              dateCol = date_debut,
              presenceCond = statut_observation  == "Présent",

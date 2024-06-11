@@ -15,7 +15,7 @@ dat <- dat %>%
     col1 = Remarques
   ) %>%
   addProtocol(
-    patterns = c("SUIVI LOUTRE 20|SUIVI LOCAL LOUTRE"),
+    patterns = c("SUIVI LOUTRE 20|SUIVI LOCAL LOUTRE|SUIVI 2020"),
     protocol = SARSL,
     col1 = Remarques
   ) %>%
@@ -29,6 +29,7 @@ dat <- dat %>%
 
 dat <- dat %>%
   formatData(dataSourceStr = "LPO-Sarthe",
+             observerCol = Nom,
              protocolCol = protocol,
              dateCol = Date,
              presenceCond = Nombre > 0,

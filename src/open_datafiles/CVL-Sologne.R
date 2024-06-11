@@ -24,6 +24,7 @@ dat <- dat %>%
 
 dat <- dat %>%
   formatData(dataSourceStr = "SNE",
+             observerCol = str_split_i(Observateur, ",", 1),
              protocolCol = protocol,
              dateCol = Date,
              presenceCond = `Statut obs`  == "Présent",

@@ -15,6 +15,7 @@ dat <- dat %>%
   filterCamTrap(toupper(Remarque)) %>%
   filter(`Contient des détails mortalité` != "Oui") %>%
   formatData(dataSourceStr = "LPO-Occitanie",
+             observerCol = paste(Nom, Prénom),
              protocolCol = "PO",
              dateCol = Date,
              presenceCond = Nombre > 0,
@@ -25,6 +26,7 @@ dat <- dat %>%
 
 dat2 <- dat2 %>%
   formatData(dataSourceStr = "LPO-Occitanie",
+             observerCol = "",
              protocolCol = "IUCN",
              dateCol = date,
              presenceCond = presence,

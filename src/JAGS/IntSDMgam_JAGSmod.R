@@ -61,7 +61,8 @@ model{
   ## LINEAR PREDICTORS
   for(pixel in 1:npixel){
     for(t in 1:nyear){
-      logit(thin_prob[pixel, t]) <- inprod(x_thin[pixel,], beta_thin) + beta_region[region[pixel], t]
+      # logit(thin_prob[pixel, t]) <- inprod(x_thin[pixel,], beta_thin) + beta_region[region[pixel], t]
+      logit(thin_prob[pixel, t]) <- inprod(x_thin[pixel,], beta_thin)
     }
     for(protocol in 1:nprotocols){
       logit(rho[pixel, protocol]) <-inprod(x_rho[pixel, ], beta_rho) + beta_rho_protocol[protocol]
@@ -81,11 +82,11 @@ model{
   }
   
   # RANDOM EFFECTS ##
-  for(reg in 1:nregion){
-    for(t in 1:nyear){
-      beta_region[reg, t] ~ dnorm(0, 1/(sigma_region*sigma_region))
-    }
-  }
+  # for(reg in 1:nregion){
+  #   for(t in 1:nyear){
+  #     beta_region[reg, t] ~ dnorm(0, 1/(sigma_region*sigma_region))
+  #   }
+  # }
   
   for(protocol in 1:nprotocols){
     beta_rho_protocol[protocol] ~ dnorm(0, 1/(sigma_protocol*sigma_protocol))

@@ -34,6 +34,7 @@ dat <- dat %>%
 dat <- dat %>%
   formatData(dataSourceStr = "LPO-Vendée",
              protocolCol = protocol,
+             observerCol = paste(TRA_NAME, TRA_SURNAME),
              dateCol = DATE,
              presenceCond = TOTAL_COUNT > 0,
              xCol = COORD_LON_L93,

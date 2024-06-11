@@ -29,6 +29,7 @@ dat1 <- dat1 %>%
 
 dat1 <- dat1 %>%
   formatData(dataSourceStr = "GREGE",
+             observerCol = "",
              protocolCol = protocol,
              dateCol = date,
              presenceCond = PRESENCE_LLU  == "Positif",
@@ -48,6 +49,7 @@ dat2 <- dat2 %>%
 
 dat2 <- dat2 %>%
   formatData(dataSourceStr = "GREGE",
+             observerCol = AUTEUR,
              protocolCol = protocol,
              dateCol = DATE_,
              presenceCond = 1,
@@ -65,6 +67,7 @@ dat3 <- dat3 %>%
 
 dat3 <- dat3 %>%
   formatData(dataSourceStr = "GREGE",
+             observerCol = "",
              protocolCol = protocol,
              dateCol = DATE_,
              presenceCond = PRESENCE_LLU == "Positif",
