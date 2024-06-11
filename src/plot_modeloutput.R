@@ -4,7 +4,7 @@ library(mgcv)
 
 rm(list = ls())
 
-path <-"out/2024-05-28_Aq.Au.Bo.Br.Cvl.FC.Li.NE.No.Oc.PACA.PdL.PoCha.RA_3yrs.rds"
+path <-"out/2024-05-30_Aq.Au.Bo.Br.Cvl.FC.Li.NE.No.Oc.PACA.PdL.PoCha.RA_3yrs.rds"
   
 out <- readRDS(path)
 

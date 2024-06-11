@@ -10,7 +10,7 @@ rm(list = ls())
 
 source("src/functions/jags_ini.R")
 
-REGIONS <- c("Aq", "Au", "Bo", "Br", "Cvl", "FC", "Li", "No", "Oc", "PACA",
+REGIONS <- c("Aq", "Au", "Bo", "Br", "Cvl", "FC", "Li", "NE","No", "Oc", "PACA",
              "PdL", "PoCha", "RA")
 
 TIMEPERIOD <- 3 #years
@@ -172,7 +172,7 @@ mcmc <- coda.samples(
   variable.names = c(
     "z",
     "b",
-    "beta_region",
+    # "beta_region",
     "beta_latent",
     "beta_rho",
     "beta_rho_protocol",
