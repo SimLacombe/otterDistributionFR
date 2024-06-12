@@ -30,7 +30,7 @@ Hdf <- left_join(Hdf, map_FR, by = "region", all.) %>%
 ### Cumulated sampled surface --------------------------------------------------
 
 getSamplingArea <- function(x, y, res = 100, bw = 25000, offset = st_bbox(map_FR)[c(1,3,2,4)] + c(-1,1,-1,1)*25000, lvl){
-  kde <- kde2d(x, y, n = res, h = c(bw, bw), lims = offset)
+  kde <- MASS::kde2d(x, y, n = res, h = c(bw, bw), lims = offset)
   
   contour_values <- sort(kde$z)
   contour_level <- contour_values[which.max(cumsum(contour_values) / sum(contour_values) >= lvl)]
