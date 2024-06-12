@@ -98,6 +98,7 @@ gamDat <- jagam(
     k = NSPLINES,
     bs = "ds",
     m = c(1, 0.5)
+    # m = c(2, 0.1)
   ),
   data = tmpDat,
   file = jags.file,
