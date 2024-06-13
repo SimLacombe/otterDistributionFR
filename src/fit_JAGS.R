@@ -97,8 +97,8 @@ gamDat <- jagam(
     N,
     k = NSPLINES,
     bs = "ds",
-    m = c(1, 0.5)
-    # m = c(2, 0.1)
+    # m = c(1, 0.5)
+    m = c(1, 0.1)
   ),
   data = tmpDat,
   file = jags.file,
@@ -150,8 +150,8 @@ inits <- foreach(i = 1:4) %do% {
 
 N.CHAINS = 4
 
-ADAPT = 1000
-BURNIN = 2000
+ADAPT = 500
+BURNIN = 1000
 SAMPLE = 1000
 THIN = 1
 

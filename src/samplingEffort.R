@@ -10,22 +10,30 @@ dat.filename <- "data/otterDat.rds"
 map_FR <- readRDS("data/map_fr.rds") %>%
   st_as_sf(crs = 2154)
 
+grid <- readRDS("data/L9310x10grid.rds") %>%
+  st_as_sf(crs = 2154)
+
 dat <- readRDS(dat.filename)
 
 datPO<- dat %>% 
   filter(protocol == "PO")
 
+# subset of data provided by major contributers
+datMC <- datPO %>%
+  group_by(observer) %>%
+  filter(n()>=5)
+
 ### entropy --------------------------------------------------------------------
 
-Hdf <- datPO %>%
-  group_by(region, year, observer) %>%
-  summarize(fObs = n()) %>%
-  group_by(region, year) %>%
-  mutate(f = fObs/sum(fObs)) %>%
-  summarize(H = - sum(f * log(f, base = 2)))
-
-Hdf <- left_join(Hdf, map_FR, by = "region", all.) %>%
-  st_as_sf()
+# Hdf <- datPO %>%
+#   group_by(region, year, observer) %>%
+#   summarize(fObs = n()) %>%
+#   group_by(region, year) %>%
+#   mutate(f = fObs/sum(fObs)) %>%
+#   summarize(H = - sum(f * log(f, base = 2)))
+# 
+# Hdf <- left_join(Hdf, map_FR, by = "region", all.) %>%
+#   st_as_sf()
 
 ### Cumulated sampled surface --------------------------------------------------
 
@@ -44,30 +52,49 @@ getSamplingArea <- function(x, y, res = 100, bw = 25000, offset = st_bbox(map_FR
   contour_sf
 }
 
-activeAreas <- datPO %>%
-  group_by(observer) %>%
-  filter(n()>=5 & observer != "unknown") %>%
+activeAreas <- datMC %>%
   group_by(observer) %>% 
-  summarize(n = n(),
-            activeArea = getSamplingArea(lon, lat, lvl = 0.05))
+  summarize(activeArea = getSamplingArea(lon, lat, lvl = 0.05))%>%
+  mutate(activeSurface = st_area(activeArea)) 
 
-activeAreas <- activeAreas %>%
-  mutate(activeSurface = st_area(activeArea)) %>%
-  arrange(activeSurface)
-
-samplingEffort <- datPO %>%
-  group_by(observer) %>%
-  filter(n()>=5 & observer != "unknown") %>%
-  group_by(observer, year) %>% 
+activeAreas <-  datMC %>%
+  group_by(year, observer) %>%
   summarize() %>%
   left_join(activeAreas, by = "observer") %>%
-  st_as_sf(crs = 2154) 
+  st_as_sf(crs = 2154)
+
+effort_intraRegion <- foreach(yr = 2009:2023, .combine = rbind) %do%{
+
+  eff <- activeAreas %>%
+    filter(year == yr) %>%
+    st_intersects(grid, .)
+  
+  grid %>% 
+  mutate(year = yr,
+         eff = sapply(eff, length))
+}
+
+effort_interRegion <-  datMC %>%
+  group_by(year, region, observer) %>%
+  summarize() %>%
+  left_join(activeAreas, by = c("year","observer")) %>%
+  st_drop_geometry() %>%
+  group_by(year, region) %>%
+  summarize(eff = sum(activeSurface)) %>% 
+  left_join(map_FR, by = "region") %>%
+  st_as_sf(crs = 2154)
 
 
-ggplot(samplingEffort %>% st_as_sf(crs = 2154)) +
-  geom_sf(aes(fill = as.numeric(activeSurface))) + 
-  geom_point(data = dat %>% filter(protocol == "PO", !region %in% c("PoCha", "Au", "RA")), aes(x = lon, y = lat), size = .5)+
-  facet_wrap(~year) + 
+ggplot(effort_intraRegion) +
+  geom_sf(aes(fill = eff), col = NA) +  
+  geom_sf(data = st_as_sf(datPO, coords= c("lon", "lat"), crs = 2154), size = 0.5)+
+  scale_fill_gradient2(
+    low = "white",
+    mid = "orange",
+    high = "darkred",
+    midpoint=8
+  ) + 
+  facet_wrap(~year)+
   theme_bw()
 
 ggplot(Hdf)+
