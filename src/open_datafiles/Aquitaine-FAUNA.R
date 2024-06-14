@@ -43,7 +43,7 @@ dat <- dat %>%
   arrangeProtocols(FAUNA1, FAUNA2)
 
 dat <- dat %>%
-  formatData(dataSourceStr = "FAUNA",
+  formatData(dataSourceStr = ifelse(GestionnaireJdd == "LPO France", str_split_i(NomJeuDonnees, '"', 2), "FAUNA"),
              protocolCol = "PO",
              observerCol = Observer,
              dateCol = DateDebut,
