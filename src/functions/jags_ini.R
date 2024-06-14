@@ -4,9 +4,7 @@ my_inits <- function(chain){
       z = matrix(1, ncol = data.list$nyear, nrow = data.list$npixel),
       beta_latent = rnorm(1, 0, 0.25),
       beta_rho = rnorm(1, 0, 0.25),
-      beta_rho_point = rnorm(1, 0, 0.25),
       beta_thin = rnorm(1, 0, 0.25),
-      beta_sampl = rnorm(1, 0, 0.25),
       b = matrix(
         rnorm(data.list$nspline * data.list$nyear, rep(gamDat$jags.ini$b,each = data.list$nyear),0),
         nrow = data.list$nspline,
