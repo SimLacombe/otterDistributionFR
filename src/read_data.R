@@ -18,19 +18,6 @@ source("src/functions/getReplicates.R")
 #   rmapshaper::ms_simplify() %>%
 #   st_transform(crs = 2154)
 # 
-# insee_to_region <- data.frame(code_insee = c("42", "72", "83", "25", "26", "53",
-#                                                  "24", "21", "43", "23", "11", "91",
-#                                                  "74", "41", "73", "31", "52", "22",
-#                                                  "54", "93", "82"),
-#                                   region = c("noDat", "Aq", "Au", "No", "Bo", "Br", "Cvl",
-#                                                   "noDat", "FC", "No", "noDat", "Oc", "Li", "noDat", "Oc",
-#                                                   "noDat", "PdL", "noDat", "PoCha", "PACA", "RA"))
-# 
-# map_FR <- map_FR %>%
-#   left_join(insee_to_region, by = "code_insee") %>%
-#   group_by(region) %>%
-#   summarize()
-# 
 # grid <- st_make_grid(map_FR, crs = 2154,
 #                      cellsize = c(10000,10000),
 #                      offset = c(99000, 6130000)) %>%
@@ -42,8 +29,8 @@ source("src/functions/getReplicates.R")
 #   mutate(gridCell = ifelse(lon >= 1000000,
 #                            paste0("E", substr(lon,1,3),"N",substr(lat,1,3)),
 #                            paste0("E0", substr(lon,1,2),"N",substr(lat,1,3)))) %>%
-#   st_join(map_FR[, "region"], largest = TRUE) %>%
-#   filter(!is.na(region))
+#   st_join(map_FR[, "code_insee"], largest = TRUE) %>%
+#   filter(!is.na(code_insee))
 # 
 # grid2 <- grid %>%
 #   st_intersection(st_union(map_FR))
@@ -75,12 +62,8 @@ otterDat <-
 
 rm(list = setdiff(ls(), envt))
 
-otterDat <-  filter(otterDat,!is.na(date))
-
-### Get only required observations ---------------------------------------------
-
-otterDat <- filter(otterDat, year %in% 2009:2023,
-                   protocol != "PO"|presence)
+otterDat <-  filter(otterDat,!is.na(date),
+                    year %in% 2009:2023)
 
 ### Get approx lat/lon for obs with missing coordinatess -----------------------
 
@@ -93,7 +76,7 @@ otterDat[is.na(otterDat$lat), c("lon", "lat")] <-
 
 ### Get Administrative regions -------------------------------------------------
 
-otterDat <-  left_join(otterDat, grid[, c("gridCell", "region")]) %>%
+otterDat <-  left_join(otterDat, grid[, c("gridCell", "code_insee")]) %>%
   select(-geometry)
 
 ### Indicate when observer name is missing -------------------------------------
@@ -102,7 +85,31 @@ otterDat <- otterDat %>%
   mutate(observer = ifelse(grepl("trans.|Anonyme", observer)|observer == ""|is.na(observer),
                            "unknown",
                            observer))
-  
+
+### Get sampling areas ---------------------------------------------------------
+
+datPO <-  otterDat %>%
+  filter(protocol == "PO")
+
+buffer <- datPO  %>%
+  group_by(dataSource) %>% 
+  summarize(buff = getSamplingArea(lon, lat, lvl = 0.001))
+
+bufferPeryear <- datPO %>% 
+  group_by(year, dataSource) %>%
+  summarize() %>% 
+  left_join(buffer, by = "dataSource") %>%
+  st_as_sf(crs = 2154) %>%
+  group_by(year) %>% 
+  summarize(buff = st_union(buff))
+
+effortMat <- sapply(2009:2023, function(x){
+  as.numeric(st_intersects(grid, bufferPeryear$buff[bufferPeryear$year == x], sparse = FALSE))
+})
+
+### Remove opportunistic negative data -----------------------------------------
+
+otterDat <- filter(otterDat, protocol != "PO"|presence)
 
 ### filter redundant observations ----------------------------------------------
 
@@ -142,7 +149,7 @@ otterDat_pa <- otterDat_pa %>%
   ungroup
 
 otterDat <- rbind(otterDat_pa, otterDat_BFC, otterDat_po) %>%
-  select(region, dataSource, observer, protocol, year, date, presence, lon, lat, gridCell) %>% 
+  select(code_insee, dataSource, observer, protocol, year, date, presence, lon, lat, gridCell) %>% 
   arrange(dataSource, protocol, year, date)
 
 rm(otterDat_pa, otterDat_po, otterDat_BFC)
@@ -182,6 +189,7 @@ ggplot(replicates.summ)+
 ### SAVE -----------------------------------------------------------------------
 
 saveRDS(otterDat, "data/otterDat.rds")
+saveRDS(effortMat, "data/samplingEffort.rds")
 
 # otterDat <- readRDS("data/otterDat.rds")
  

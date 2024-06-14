@@ -10,8 +10,11 @@ rm(list = ls())
 
 source("src/functions/jags_ini.R")
 
-REGIONS <- c("Aq", "Au", "Bo", "Br", "Cvl", "FC", "Li", "NE","No", "Oc", "PACA",
-             "PdL", "PoCha", "RA")
+# Crop Paris + NE
+REGIONS <- c("72", "83", "25", "26", "53",
+             "24", "43", "23", "91",
+             "74", "73", "52",
+             "54", "93", "82")
 
 TIMEPERIOD <- 3 #years
 
@@ -22,16 +25,29 @@ TIMELAG <- TIMEPERIOD - 2009 %% TIMEPERIOD
 
 data.filename <- "data/otterDat.rds"
 grid.filename <- "data/L9310x10grid.rds"
+effort.filename <- "data/samplingEffort.rds"
 
 otterDat <- readRDS(data.filename)
 
 L93_grid <- readRDS(grid.filename) %>%
   st_as_sf(crs = 2154)
 
+effort <- readRDS(effort.filename)
+
+### Adapt effort matrix to sp and tmp resolution -------------------------------
+
+periods <- (2009:2023 + TIMELAG) %/% TIMEPERIOD
+
+effort <- effort[L93_grid$code_insee %in% REGIONS, ]
+
+effort <- sapply(unique(periods), function(p){
+  sign(apply(effort[, periods == p], 1,sum))
+})
+
 ### Filter the region of interest ----------------------------------------------
 
-otterDat <- filter(otterDat, region %in% REGIONS)
-L93_grid <- filter(L93_grid, region %in% REGIONS)
+otterDat <- filter(otterDat, code_insee %in% REGIONS)
+L93_grid <- filter(L93_grid, code_insee %in% REGIONS)
 
 ### Get offset and spatial covariates ------------------------------------------
 
@@ -79,7 +95,7 @@ poIdxs <- c(0, cumsum(npo))
 
 ### GAM Data -------------------------------------------------------------------
 
-NSPLINES = 10
+NSPLINES = 20
 
 jags.file <- "src/JAGS/test.jags"
 
@@ -97,8 +113,7 @@ gamDat <- jagam(
     N,
     k = NSPLINES,
     bs = "ds",
-    # m = c(1, 0.5)
-    m = c(1, 0.1)
+    m = c(1, 0.5)
   ),
   data = tmpDat,
   file = jags.file,
@@ -116,7 +131,7 @@ data.list <- list(
   cell_area = L93_grid$logArea,
   npixel = npixel,
   nyear = nperiod,
-  nregion = length(unique(L93_grid$region)),
+  nregion = length(unique(L93_grid$code_insee)),
   nprotocols = length(unique(paDat$protocol.fact)),
   nspline = length(gamDat$jags.data$zero),
   npo = npo,
@@ -130,7 +145,8 @@ data.list <- list(
   x_rho =  matrix(L93_grid$intercept, npixel, 1),
   x_gam = gamDat$jags.data$X,
   S1 = gamDat$jags.data$S1,
-  region = as.numeric(as.factor(L93_grid$region)),
+  region = as.numeric(as.factor(L93_grid$code_insee)),
+  effort = effort,
   pa_protocole = paDat$protocol.fact,
   po_pixel = poDat$pixel,
   pa_pixel = paDat$pixel,
