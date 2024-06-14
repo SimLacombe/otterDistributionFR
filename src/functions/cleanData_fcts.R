@@ -83,7 +83,7 @@ formatData <- function(x,
                        dateformat) {
   x <- x %>%
     mutate(
-      dataSource = dataSourceStr,
+      dataSource = {{ dataSourceStr }},
       observer = {{ observerCol }},
       protocol = {{ protocolCol }},
       date = as.Date({{ dateCol }}, format = dateformat),
