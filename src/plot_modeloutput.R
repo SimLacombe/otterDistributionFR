@@ -4,12 +4,15 @@ library(mgcv)
 
 rm(list = ls())
 
-path <-"out/2024-06-13_Aq.Au.Bo.Br.Cvl.FC.Li.NE.No.Oc.PACA.PdL.PoCha.RA_3yrs.rds"
+path <-"out/2024-06-14_72.83.25.26.53.24.43.23.91.74.73.52.54.93.82_3yrs.rds"
   
 out <- readRDS(path)
 
-REGIONS <- c("Aq", "Au", "Bo", "Br", "Cvl", "FC", "Li", "No", "NE", "Oc", "PACA",
-             "PdL", "PoCha", "RA")
+# Crop Paris + NE
+REGIONS <- c("72", "83", "25", "26", "53",
+             "24", "43", "23", "91",
+             "74", "73", "52",
+             "54", "93", "82")
 
 TIMEPERIOD <- 3 #years
 
@@ -32,8 +35,8 @@ map <- readRDS(map.filename) %>%
 
 ### Filter the region of interest ----------------------------------------------
 
-otterDat <- filter(otterDat, region %in% REGIONS)
-L93_grid <- filter(L93_grid, region %in% REGIONS)
+otterDat <- filter(otterDat, code_insee %in% REGIONS)
+L93_grid <- filter(L93_grid, code_insee %in% REGIONS)
 
 ### Get offset and spatial covariates ------------------------------------------
 
@@ -48,7 +51,7 @@ nperiod <- length(unique(otterDat$period))
 
 ### GAM Data -------------------------------------------------------------------
 
-NSPLINES = 10
+NSPLINES = 20
 
 jags.file <- "src/JAGS/test.jags"
 

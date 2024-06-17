@@ -16,7 +16,7 @@ REGIONS <- c("72", "83", "25", "26", "53",
              "74", "73", "52",
              "54", "93", "82")
 
-TIMEPERIOD <- 3 #years
+TIMEPERIOD <- 1 #years
 
 TIMELAG <- TIMEPERIOD - 2009 %% TIMEPERIOD
 
@@ -189,7 +189,7 @@ mcmc <- coda.samples(
   variable.names = c(
     "z",
     "b",
-    # "beta_region",
+    "beta_region",
     "beta_latent",
     "beta_rho",
     "beta_rho_protocol",
