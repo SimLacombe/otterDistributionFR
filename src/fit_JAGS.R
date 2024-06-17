@@ -40,9 +40,12 @@ periods <- (2009:2023 + TIMELAG) %/% TIMEPERIOD
 
 effort <- effort[L93_grid$code_insee %in% REGIONS, ]
 
-effort <- sapply(unique(periods), function(p){
-  sign(apply(effort[, periods == p], 1,sum))
-})
+if(TIMEPERIOD > 1) {
+  effort <- sapply(unique(periods), function(p) {
+    sign(apply(effort[, periods == p], 1, sum))
+  })
+}
+
 
 ### Filter the region of interest ----------------------------------------------
 
