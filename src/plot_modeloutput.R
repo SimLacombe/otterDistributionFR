@@ -4,7 +4,7 @@ library(mgcv)
 
 rm(list = ls())
 
-path <-"out/2024-06-14_72.83.25.26.53.24.43.23.91.74.73.52.54.93.82_3yrs.rds"
+path <-"out/2024-06-17_72.83.25.26.53.24.43.23.91.74.73.52.54.93.82_1yrs.rds"
   
 out <- readRDS(path)
 
@@ -14,7 +14,7 @@ REGIONS <- c("72", "83", "25", "26", "53",
              "74", "73", "52",
              "54", "93", "82")
 
-TIMEPERIOD <- 3 #years
+TIMEPERIOD <- 1 #years
 
 TIMELAG <- TIMEPERIOD - 2009 %% TIMEPERIOD
 
@@ -87,13 +87,16 @@ for (t in 1:nperiod) {
   zz[, , t] <-
     zzz[1:nrow(zzz), ((t - 1) * ncol(zzz) / nperiod + 1):(t * ncol(zzz) / nperiod)]
 }
+
 z <- apply(zz, c(2, 3), mean)
+sz <- apply(zz, c(2,3), sd)
 
 rm("zzz", "zz")
 
 z.df <- data.frame(
   gridCell = rep(L93_grid$gridCell, nperiod),
   meanz = c(z[, 1:nperiod]),
+  sz = c(sz[, 1:nperiod]),
   period = rep(unique(otterDat$period), each = nrow(z))
 ) %>%
   left_join(L93_grid, .) %>%
@@ -199,8 +202,13 @@ ggplot() +
   theme_bw()
 
 ggplot() +
-  geom_sf(data = z.df, aes(fill = z.occupied), alpha = .85) +
-  scale_fill_manual(values = c("orange", "white")) +
+  geom_sf(data = z.df, aes(fill = sz), col = NA, alpha = .85) +
+  scale_fill_gradient2(
+    low = "white",
+    mid = "orange",
+    high = "darkred",
+    midpoint = .5
+  )  +
   facet_wrap( ~ period) +
   theme_bw()
 
