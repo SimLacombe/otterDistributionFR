@@ -4,7 +4,7 @@ library(mgcv)
 
 rm(list = ls())
 
-path <-"out/2024-06-17_72.83.25.26.53.24.43.23.91.74.73.52.54.93.82_1yrs.rds"
+path <-"out/2024-06-19_72.83.25.26.53.24.43.23.91.74.73.52.54.93.82_1yrs.rds"
   
 out <- readRDS(path)
 
@@ -24,6 +24,7 @@ TIMELAG <- TIMEPERIOD - 2009 %% TIMEPERIOD
 data.filename <- "data/otterDat.rds"
 grid.filename <- "data/L9310x10grid.rds"
 map.filename <- "data/map_fr.rds"
+effort.filename <- "data/samplingEffort.rds"
 
 otterDat <- readRDS(data.filename)
 
@@ -33,7 +34,11 @@ L93_grid <- readRDS(grid.filename) %>%
 map <- readRDS(map.filename) %>%
   st_as_sf(crs = 2154)
 
+effort <- readRDS(effort.filename)
+
 ### Filter the region of interest ----------------------------------------------
+
+effort <- effort[L93_grid$code_insee %in% REGIONS, ]
 
 otterDat <- filter(otterDat, code_insee %in% REGIONS)
 L93_grid <- filter(L93_grid, code_insee %in% REGIONS)
@@ -202,7 +207,7 @@ ggplot() +
   theme_bw()
 
 ggplot() +
-  geom_sf(data = z.df, aes(fill = sz), col = NA, alpha = .85) +
+  geom_sf(data = z.df, aes(fill = meanz), col = NA, alpha = .85) +
   scale_fill_gradient2(
     low = "white",
     mid = "orange",
@@ -246,3 +251,13 @@ ggplot(rho.df) +
   show.legend = F) +
   geom_hline(aes(yintercept = 0)) +
   theme_bw()
+
+eff.df <- cbind(L93_grid, effort)
+colnames(eff.df)[7:21] <- paste0("yr", 1:15)
+eff.df <- pivot_longer(eff.df, cols = all_of(paste0("yr", 1:15)),
+                       names_to = "year", values_to = "effort") %>%
+  mutate(year = factor(year, levels = paste0("yr", 1:15)))
+
+ggplot(eff.df) +
+  geom_sf(aes(fill = effort)) +
+  facet_wrap(~year)

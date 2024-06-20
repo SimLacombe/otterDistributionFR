@@ -2,6 +2,7 @@ library(tidyverse)
 library(lubridate)
 library(foreach)
 library(sf)
+library(raster)
 library(concom)
 
 rm(list = ls())
@@ -34,6 +35,8 @@ source("src/functions/getReplicates.R")
 # 
 # grid2 <- grid %>%
 #   st_intersection(st_union(map_FR))
+# 
+# grid2$code_insee <- as.factor(grid2$code_insee)
 # 
 # saveRDS(grid, "data/L9310x10grid_uncropped.rds")
 # saveRDS(grid2, "data/L9310x10grid.rds")
@@ -154,71 +157,9 @@ otterDat <- rbind(otterDat_pa, otterDat_BFC, otterDat_po) %>%
 
 rm(otterDat_pa, otterDat_po, otterDat_BFC)
 
-## 4. Plot
-
-PO.summ <- otterDat %>%
-  filter(protocol == "PO") %>%
-  group_by(protocol, gridCell, year) %>%
-  summarize(n.repl = n()) %>%
-  left_join(grid[, c("geometry", "gridCell")], by = "gridCell")%>%
-  st_as_sf 
-  
-replicates.summ <- otterDat %>%
-  filter(protocol != "PO") %>%
-  group_by(protocol, gridCell, year) %>%
-  summarize(n.repl = n()) %>%
-  left_join(grid[, c("geometry", "gridCell")], by = "gridCell")%>%
-  st_as_sf 
-
-ggplot(replicates.summ) +
-  stat_ecdf(aes(x = n.repl, color = protocol), size = 2, show.legend = F)+
-  scale_x_continuous(breaks = 1:10, limits = c(1,10))+
-  facet_wrap(~protocol)+
-  theme_bw()
-
-ggplot(replicates.summ)+
-  geom_sf(data = map_FR) +
-  geom_sf(aes(fill = n.repl)) + 
-  scale_fill_gradient2(
-    low = "white",
-    high = "red"
-  ) + 
-  facet_wrap(~year)+
-  theme_bw()
-
 ### SAVE -----------------------------------------------------------------------
 
 saveRDS(otterDat, "data/otterDat.rds")
 saveRDS(effortMat, "data/samplingEffort.rds")
 
 # otterDat <- readRDS("data/otterDat.rds")
- 
-### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PLOT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-
-otterDat <- otterDat %>%
-  mutate(period = year %/% 4)
-
-otterDat %>%
-  filter(protocol != "PO") %>% 
-  st_drop_geometry() %>%
-  group_by(period, gridCell) %>%
-  summarize(presence = any(as.logical(presence)),
-            nsample = n()) %>%
-  left_join(grid[, c("geometry", "gridCell")], by = "gridCell") %>%
-  st_as_sf %>%
-  ggplot() +
-  geom_sf(data = map_FR) +
-  geom_sf(aes(fill = presence)) +
-  geom_sf(data = otterDat %>% 
-            filter(protocol == "PO") %>% 
-            st_as_sf(coords = c("lon", "lat"),crs = 2154), aes(color = protocol), size = .25) +
-  scale_fill_manual(name = "Standardized data",
-                    values = c("orange", "darkblue"),
-                    labels = c("Unobserved", "present")) +
-  scale_color_manual("Opportunistic data", values = "black", label = "present") +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  guides(colour = guide_legend(title.position="top", title.hjust = 0.5),
-         fill = guide_legend(title.position="top", title.hjust = 0.5))+
-  facet_wrap( ~ paste0(period * 4, " - ", period * 4 + 3))
-  # facet_wrap( ~ year)
