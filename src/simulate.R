@@ -1,20 +1,27 @@
 library(tidyverse)
 library(mvtnorm)
-library(stars)
 library(sf)
 library(purrr)
 library(foreach)
 
+library(mgcv)
+library(rjags)
+library(coda)
+
 rm(list = ls())
 
 source("src/functions/simulate_fcts.r")
+source("src/functions/jags_ini.R")
 
 years <- 1:5
 
+effort.filename <- "data/samplingEffort.rds"
 grid.filename <- "data/L9310x10grid.rds"
 
 grid <- readRDS(grid.filename) %>%
   st_as_sf(crs = 2154)
+
+### 1. SIMULATE LATENT SPACE ---------------------------------------------------
 
 mu <- list(
   c(0.15,0.7),
@@ -39,8 +46,165 @@ simDat <- map(years, grid, .f = function(t, grid){
 
 simDat <- reduce(simDat, rbind)
 
+### 2. SIMULATE OBSERVATIONS ---------------------------------------------------
+
+effort <- readRDS(effort.filename) 
+
+effort <- effort[, c(1,4,6,8,12)] 
+
+simDat$effort <- c(effort)
+
+b <- 0.5
+rho <- 0.5
+
+simDat <- simDat %>% 
+  rowwise() %>%
+  mutate(psi = 1 - exp(-lambda),
+         z = rbinom(1, 1, psi),
+         K = rbinom(1, 1, 0.2) * (rpois(1,2) + 1))
+
+
+poDat <- simDat %>% 
+  st_drop_geometry %>%
+  rowwise() %>%
+  mutate(npo = rpois(1, lambda * b * effort)) %>%
+  uncount(npo) %>%
+  rowwise() %>%
+  mutate(lon = lon + runif(1, -5000, 5000),
+         lat = lat + runif(1, -5000, 5000)) %>%
+  select(lon, lat, year, gridCell)
+
+paDat <- simDat %>%
+  filter(K>0, effort == 1) %>%
+  rowwise() %>%
+  mutate(y = rbinom(1, K, z * rho)) %>%
+  select(year, gridCell, K, y)
+
+## plot simulated data ##
 ggplot(simDat) + 
-  geom_sf(aes(fill =  lambda), col = NA) +
-  facet_wrap(~year) + 
-  scale_fill_gradient(low = "lightblue", high = "darkblue") +
-  theme_bw()
+  geom_sf(data = paDat, aes(fill = y > 0))+
+  geom_point(data = poDat, aes(x= lon, y = lat), size = .3)+
+  facet_wrap(~year)
+
+### 3. FIT THE MODEL -----------------------------------------------------------
+
+## get grid ##
+grid$intercept <- 1
+grid$logArea <- log(as.numeric(st_area(grid)) / 1000 ** 2)
+
+## format paDat ## 
+paDat <- paDat %>% 
+  mutate(pixel = pmatch(gridCell, grid$gridCell, duplicates.ok = TRUE))
+
+npa <- unname(c(table(paDat$year)))
+paIdxs <- c(0, cumsum(npa))
+
+## format poDat ##
+poDat <- poDat %>% 
+  mutate(pixel = pmatch(gridCell, grid$gridCell, duplicates.ok = TRUE),
+         ones = 1)
+npo <- unname(c(table(poDat$year)))
+poIdxs <- c(0, cumsum(npo))
+
+## GAM stuff ## 
+NSPLINES = 20
+
+jags.file <- "src/JAGS/test.jags"
+
+tmpDat <- grid %>%
+  st_centroid() %>%
+  st_transform(crs = 4326) %>%
+  st_coordinates() %>%
+  data.frame(1, .)
+
+names(tmpDat) <- c("y", "E", "N")
+
+gamDat <- jagam(
+  y ~ s(
+    E,
+    N,
+    k = NSPLINES,
+    bs = "ds",
+    m = c(1, 0.5)
+  ),
+  data = tmpDat,
+  file = jags.file,
+  family = "binomial"
+)
+
+rm(tmpDat)
+
+gamDat$jags.ini$b[1] <- -4.6 #log area of cells
+
+## Format data list ##
+
+npixel <- nrow(grid)
+nperiod <- length(unique(paDat$year))
+
+data.list <- list(
+  cell_area = grid$logArea,
+  npixel = npixel,
+  nyear = nperiod,
+  nprotocols = 1,
+  nspline = length(gamDat$jags.data$zero),
+  npo = npo,
+  po.idxs = poIdxs,
+  pa.idxs = paIdxs,
+  ncov_lam = 1,
+  ncov_thin = 1,
+  ncov_rho = 1,
+  x_latent =  matrix(0, npixel, 1),
+  x_thin = matrix(grid$intercept, npixel, 1),
+  x_rho =  matrix(grid$intercept, npixel, 1),
+  x_gam = gamDat$jags.data$X,
+  S1 = gamDat$jags.data$S1,
+  effort = effort,
+  pa_protocole = rep(1, nrow(paDat)),
+  po_pixel = poDat$pixel,
+  pa_pixel = paDat$pixel,
+  y = paDat$y,
+  K = paDat$K,
+  ones = poDat$ones,
+  zero = gamDat$jags.data$zero,
+  cste = 1000
+)
+
+inits <- foreach(i = 1:4) %do% {
+  my_inits(i)
+}
+
+## FIT ## 
+
+N.CHAINS = 4
+
+ADAPT = 500
+BURNIN = 1000
+SAMPLE = 1000
+THIN = 1
+
+mod <- jags.model(
+  file = "src/JAGS/IntSDMgam_JAGSmod.R",
+  data = data.list,
+  inits = inits,
+  n.chains = N.CHAINS,
+  n.adapt = ADAPT)
+
+update(mod, BURNIN)
+
+mcmc <- coda.samples(
+  mod,
+  variable.names = c(
+    "z",
+    "b",
+    "beta_region",
+    "beta_latent",
+    "beta_rho",
+    "beta_rho_protocol",
+    "beta_thin",
+    "lambda_gam"
+  ),
+  n.iter = SAMPLE,
+  thin = THIN
+)
+
+saveRDS(out, "out/simulateMod.rds")
