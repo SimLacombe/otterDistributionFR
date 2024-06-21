@@ -31,7 +31,7 @@ r <- 2500
 simDat <- map(years, grid, .f = function(t, grid){
   grid$year <- t
   grid$lambda <- map(1:3, .f = function(i){
-    gen_mvn(grid, mu[[i]], sigma[[i]]+ c(r,r) * (t-1), 0)}) %>%
+    gen_mvn(grid, mu[[i]], sigma[[i]] + c(r,r) * (t-1), 0)}) %>%
     reduce(`+`)
     
   grid
@@ -44,7 +44,3 @@ ggplot(simDat) +
   facet_wrap(~year) + 
   scale_fill_gradient(low = "lightblue", high = "darkblue") +
   theme_bw()
-
-
-
-
