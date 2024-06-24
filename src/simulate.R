@@ -69,7 +69,7 @@ poDat <- simDat %>%
   rowwise() %>%
   mutate(npo = rpois(1, lambda * b * effort)) %>%
   uncount(npo) %>%
-  rowwise() %>%
+  rowwise() %>% 
   mutate(lon = lon + runif(1, -5000, 5000),
          lat = lat + runif(1, -5000, 5000)) %>%
   select(lon, lat, year, gridCell)
@@ -206,5 +206,7 @@ mcmc <- coda.samples(
   n.iter = SAMPLE,
   thin = THIN
 )
+
+out <- as.matrix(as.mcmc.list(mcmc), chains = T)
 
 saveRDS(out, "out/simulateMod.rds")

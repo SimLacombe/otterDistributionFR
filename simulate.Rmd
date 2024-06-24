@@ -1,0 +1,353 @@
+---
+title: "Simulation study"
+output:
+  html_document: default
+  pdf_document: default
+date: "2024-06-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load utility
+
+```{r get libraries and utilities, echo=TRUE, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(mvtnorm)
+library(sf)
+library(purrr)
+library(foreach)
+
+library(mgcv)
+library(rjags)
+library(coda)
+library(LaplacesDemon)
+
+source("src/functions/simulate_fcts.r")
+source("src/functions/jags_ini.R")
+
+years <- 1:5
+
+# get grid 
+grid.filename <- "data/L9310x10grid.rds"
+grid <- readRDS(grid.filename) %>%
+  st_as_sf(crs = 2154)
+
+# get sampling effort
+effort.filename <- "data/samplingEffort.rds"
+effort <- readRDS(effort.filename) 
+
+# keep only 5 years
+effort <- effort[, c(1,4,6,8,12)] 
+
+# define detection probability
+b <- 0.5
+
+# define thining probability
+rho <- 0.5
+```
+
+## 1. Simulate latent state
+
+```{r simulate latent state, warning = FALSE}
+
+# 1. Coordinates of the centers of the distribution areas (Brettagne, Massif Central, Facade Aquitaine)
+mu <- list(
+  c(0.15,0.7),
+  c(0.55,0.4),
+  c(0.3,0.3)) 
+
+# 2. Shape and initial size of the distribution areas
+sigma <-list(
+  c(5000, 2500),
+  c(5000, 1000),
+  c(2500, 5000))
+
+# 3. Yearly increase of the distribution areas
+r <- 2500
+
+# 4. Simulate using gen_mvn function as a multivariate normal density function (fct adapted from Fidino 2021)
+simDat <- map(years, grid, .f = function(t, grid){
+  grid$year <- t
+  grid$lambda <- map(1:3, .f = function(i){
+    gen_mvn(grid, mu[[i]], sigma[[i]] + c(r,r) * (t-1), 0)}) %>%
+    reduce(`+`)
+    
+  grid
+}) 
+
+simDat <- reduce(simDat, rbind)
+
+rm(mu, sigma, r)
+```
+
+### Plot latent space 
+
+```{r plot simulated latent}
+
+ggplot(simDat) + 
+  geom_sf(aes(fill = 1 - exp(-lambda)), col = NA)+
+  facet_wrap(~year) + 
+  theme_bw()
+
+```
+
+## 2. Simulate observation data
+
+### A. Presence only data 
+
+```{r presence only data}
+
+simDat$effort <- c(effort)
+
+# 1. Generate observations (only where effort = 1)
+poDat <- simDat %>% 
+  st_drop_geometry %>%
+  rowwise() %>%
+  mutate(npo = rpois(1, lambda * b * effort)) %>%
+  uncount(npo)
+
+# 2. Add random coordinates within the grid cell for convenience when plotting
+poDat <- poDat %>%
+  rowwise() %>% 
+  mutate(lon = lon + runif(1, -5000, 5000),
+         lat = lat + runif(1, -5000, 5000)) %>%
+  select(lon, lat, year, gridCell)
+
+ggplot(simDat) + 
+  geom_sf(aes(fill = lambda), col = NA) +
+  geom_sf(data = st_as_sf(poDat, coords = c("lon", "lat"), crs = 2154), size = .3) +
+  facet_wrap(~year) + 
+  theme_bw()
+
+```
+
+### B. Presence absence data 
+
+```{r presence absence data}
+
+# 1. get psi and derive latent occupancy z
+# 2. get K the number of visits per cell (0.2 is the proba that a cell is visited, average number of visits is 3)
+
+simDat <- simDat %>% 
+  rowwise() %>%
+  mutate(psi = 1 - exp(-lambda),
+         z = rbinom(1, 1, psi),
+         K = rbinom(1, 1, 0.2) * (rpois(1,2) + 1))
+
+# 3. Crop to the effort matrix and generate observations
+
+paDat <- simDat %>%
+  filter(K>0, effort == 1) %>%
+  rowwise() %>%
+  mutate(y = rbinom(1, K, z * rho)) %>%
+  select(year, gridCell, K, y)
+
+ggplot(simDat) + 
+  geom_sf(aes(fill = lambda), col = NA)+
+  ggnewscale::new_scale_fill()+
+  geom_sf(data = paDat, aes(fill = y > 0)) + 
+  facet_wrap(~year) + 
+  theme_bw()
+
+```
+
+
+## 3. Format data to run the model 
+
+```{r format data for JAGS, warning=FALSE}
+# 1.  get grid 
+grid$intercept <- 1
+grid$logArea <- log(as.numeric(st_area(grid)) / 1000 ** 2)
+
+# 2. format paDat
+paDat <- paDat %>% 
+  mutate(pixel = pmatch(gridCell, grid$gridCell, duplicates.ok = TRUE))
+
+npa <- unname(c(table(paDat$year)))
+paIdxs <- c(0, cumsum(npa))
+
+# 3. format poDat 
+poDat <- poDat %>% 
+  mutate(pixel = pmatch(gridCell, grid$gridCell, duplicates.ok = TRUE),
+         ones = 1)
+npo <- unname(c(table(poDat$year)))
+poIdxs <- c(0, cumsum(npo))
+
+# 4. GAM stuff 
+NSPLINES = 20
+
+jags.file <- "src/JAGS/test.jags"
+
+tmpDat <- grid %>%
+  st_centroid() %>%
+  st_transform(crs = 4326) %>%
+  st_coordinates() %>%
+  data.frame(1, .)
+
+names(tmpDat) <- c("y", "E", "N")
+
+gamDat <- jagam(
+  y ~ s(
+    E,
+    N,
+    k = NSPLINES,
+    bs = "ds",
+    m = c(1, 0.5)
+  ),
+  data = tmpDat,
+  file = jags.file,
+  family = "binomial"
+)
+
+rm(tmpDat)
+
+gamDat$jags.ini$b[1] <- -4.6 #log area of cells
+
+# 5. Create data list
+
+npixel <- nrow(grid)
+nperiod <- length(unique(paDat$year))
+
+data.list <- list(
+  cell_area = grid$logArea,
+  npixel = npixel,
+  nyear = nperiod,
+  nprotocols = 1,
+  nspline = length(gamDat$jags.data$zero),
+  npo = npo,
+  po.idxs = poIdxs,
+  pa.idxs = paIdxs,
+  ncov_lam = 1,
+  ncov_thin = 1,
+  ncov_rho = 1,
+  x_latent =  matrix(0, npixel, 1),
+  x_thin = matrix(grid$intercept, npixel, 1),
+  x_rho =  matrix(grid$intercept, npixel, 1),
+  x_gam = gamDat$jags.data$X,
+  S1 = gamDat$jags.data$S1,
+  effort = effort,
+  pa_protocole = rep(1, nrow(paDat)),
+  po_pixel = poDat$pixel,
+  pa_pixel = paDat$pixel,
+  y = paDat$y,
+  K = paDat$K,
+  ones = poDat$ones,
+  zero = gamDat$jags.data$zero,
+  cste = 1000
+)
+
+inits <- foreach(i = 1:4) %do% {
+  my_inits(i)
+}
+```
+
+## 4. Fit Model
+
+```{r FIT}
+
+# N.CHAINS = 4
+# 
+# ADAPT = 500
+# BURNIN = 1000
+# SAMPLE = 1000
+# THIN = 1
+# 
+# mod <- jags.model(
+#   file = "src/JAGS/IntSDMgam_JAGSmod.R",
+#   data = data.list,
+#   inits = inits,
+#   n.chains = N.CHAINS,
+#   n.adapt = ADAPT)
+# 
+# update(mod, BURNIN)
+# 
+# mcmc <- coda.samples(
+#   mod,
+#   variable.names = c(
+#     "z",
+#     "b",
+#     "beta_region",
+#     "beta_latent",
+#     "beta_rho",
+#     "beta_rho_protocol",
+#     "beta_thin",
+#     "lambda_gam"
+#   ),
+#   n.iter = SAMPLE,
+#   thin = THIN
+# )
+# saveRDS(out, "out/simulateMod.rds")
+
+out <- readRDS("out/simulateMod_bis.rds") 
+```
+
+## 5. Plot output
+
+### A. Map of lambda
+
+```{r create lam dataframe, message=FALSE}
+
+bbb <- out[, grep("b\\[", colnames(out))]
+ll <- array(NA, dim = c(nrow(bbb), nrow(grid), nperiod))
+
+for (i in 1:nrow(ll)) {
+  ll[i, , ] <-
+    gamDat$jags.data$X %*% matrix(bbb[i, ], nrow = NSPLINES, ncol = nperiod) + matrix(rep(grid$logArea, nperiod),
+                                                                                      nrow = nrow(grid),
+                                                                                      ncol = nperiod)
+}
+
+l <- exp(apply(ll, c(2, 3), mean))
+
+rm("bbb", "ll")
+
+latent.df <-
+  data.frame(
+    gridCell = rep(grid$gridCell, nperiod),
+    psi = 1 - exp(-c(l)),
+    period = rep(years, each = nrow(l))
+  ) %>%
+  left_join(grid, .) %>%
+  group_by(gridCell) %>% 
+  mutate(dpsi = psi-lag(psi)) %>%
+  ungroup()
+```
+
+```{r plot latent}
+
+ggplot() +
+  geom_sf(data = latent.df, aes(fill = psi), col = NA, alpha = .85) +
+  scale_fill_gradient2(
+    low = "white",
+    mid = "orange",
+    high = "darkred",
+    midpoint = .5
+  )  +
+  facet_wrap( ~ period) +
+  theme_bw()
+
+```
+
+### B. Posterior distribution of b and rho
+
+```{r get posteriors}
+b_est <- out[, grep("beta_thin", colnames(out))]
+rho_est <- out[, grep("beta_rho", colnames(out))] %>%
+  apply(1, sum)
+
+post <- data.frame(value = invlogit(c(b_est, rho_est)),
+                  param = rep(c("b", "rho"), each = length(b_est)))
+```
+
+```{r plot posteriors}
+
+ggplot(post)+
+  geom_violin(aes(x = param, y = value, fill = param)) + 
+  geom_hline(aes(yintercept = 0.5)) +
+  theme_bw()
+
+```
+

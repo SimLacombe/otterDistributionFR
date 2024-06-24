@@ -6,3 +6,7 @@ data/*
 plots/*
 out/*
 packagetoMESOLR/*
+!data/otterDat.rds
+!data/map_fr.rds
+!data/L9310x10grid.rds
+!data/samplingEffort.rds
