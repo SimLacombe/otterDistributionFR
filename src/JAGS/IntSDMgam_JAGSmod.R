@@ -62,7 +62,8 @@ model{
   for(pixel in 1:npixel){
     for(t in 1:nyear){
       # thin_prob[pixel, t] <- ilogit(inprod(x_thin[pixel,], beta_thin) + beta_region[region[pixel], t]) * effort[pixel, t]
-      thin_prob[pixel, t] <- ilogit(inprod(x_thin[pixel,], beta_thin)) * effort[pixel, t]
+      # thin_prob[pixel, t] <- ilogit(inprod(x_thin[pixel,], beta_thin)) * effort[pixel, t]
+      thin_prob[pixel, t] <- ilogit(inprod(x_thin[pixel,], beta_thin))
     }
     for(protocol in 1:nprotocols){
       rho[pixel, protocol] <- ilogit(inprod(x_rho[pixel, ], beta_rho) + beta_rho_protocol[protocol])
