@@ -11,7 +11,7 @@ library(coda)
 rm(list = ls())
 
 source("src/functions/simulate_fcts.r")
-source("src/functions/jags_ini.R")
+source("src/functions/jags_ini_bis.R")
 
 years <- 1:5
 
@@ -20,6 +20,9 @@ grid.filename <- "data/L9310x10grid.rds"
 
 grid <- readRDS(grid.filename) %>%
   st_as_sf(crs = 2154)
+
+grid$px <- 1:nrow(grid)
+grid$logArea <- log(as.numeric(st_area(grid)) / 1000 ** 2)
 
 ### 1. SIMULATE LATENT SPACE ---------------------------------------------------
 
@@ -61,52 +64,15 @@ simDat <- simDat %>%
   rowwise() %>%
   mutate(psi = 1 - exp(-lambda),
          z = rbinom(1, 1, psi),
-         K = rbinom(1, 1, 0.2) * (rpois(1,2) + 1))
-
-
-poDat <- simDat %>% 
-  st_drop_geometry %>%
-  rowwise() %>%
-  mutate(npo = rpois(1, lambda * b * effort)) %>%
-  uncount(npo) %>%
-  rowwise() %>% 
-  mutate(lon = lon + runif(1, -5000, 5000),
-         lat = lat + runif(1, -5000, 5000)) %>%
-  select(lon, lat, year, gridCell)
-
-paDat <- simDat %>%
-  filter(K>0, effort == 1) %>%
-  rowwise() %>%
-  mutate(y = rbinom(1, K, z * rho)) %>%
-  select(year, gridCell, K, y)
-
-## plot simulated data ##
-ggplot(simDat) + 
-  geom_sf(data = paDat, aes(fill = y > 0))+
-  geom_point(data = poDat, aes(x= lon, y = lat), size = .3)+
-  facet_wrap(~year)
+         K = rbinom(1, 1, 0.2) * (rpois(1,2) + 1),
+         ypa = rbinom(1, K, z * rho),
+         ypo = rpois(1, lambda * b * effort)) %>%
+  filter(effort>0 | K>0)
 
 ### 3. FIT THE MODEL -----------------------------------------------------------
 
-## get grid ##
-grid$intercept <- 1
-grid$logArea <- log(as.numeric(st_area(grid)) / 1000 ** 2)
-
-## format paDat ## 
-paDat <- paDat %>% 
-  mutate(pixel = pmatch(gridCell, grid$gridCell, duplicates.ok = TRUE))
-
-npa <- unname(c(table(paDat$year)))
-paIdxs <- c(0, cumsum(npa))
-
-## format poDat ##
-poDat <- poDat %>% 
-  mutate(pixel = pmatch(gridCell, grid$gridCell, duplicates.ok = TRUE),
-         ones = 1)
-npo <- unname(c(table(poDat$year)))
-poIdxs <- c(0, cumsum(npo))
-
 ## GAM stuff ## 
+
 NSPLINES = 20
 
 jags.file <- "src/JAGS/test.jags"
@@ -138,35 +104,29 @@ gamDat$jags.ini$b[1] <- -4.6 #log area of cells
 
 ## Format data list ##
 
-npixel <- nrow(grid)
-nperiod <- length(unique(paDat$year))
-
 data.list <- list(
-  cell_area = grid$logArea,
-  npixel = npixel,
-  nyear = nperiod,
+  npxt = nrow(simDat),
+  npixel = nrow(grid),
+  nyear = length(unique(simDat$year)),
+  px = simDat$px,
+  t = simDat$year,
+  ypa = simDat$ypa,
+  K = simDat$K,
+  ypo = simDat$ypo,
+  is_po_sampled = simDat$effort,
   nprotocols = 1,
-  nspline = length(gamDat$jags.data$zero),
-  npo = npo,
-  po.idxs = poIdxs,
-  pa.idxs = paIdxs,
+  pa_protocol = rep(1, nrow(simDat)),
   ncov_lam = 1,
   ncov_thin = 1,
   ncov_rho = 1,
-  x_latent =  matrix(0, npixel, 1),
-  x_thin = matrix(grid$intercept, npixel, 1),
-  x_rho =  matrix(grid$intercept, npixel, 1),
+  cell_area = simDat$logArea,
+  x_latent =  matrix(0, nrow(grid), 1),
+  x_thin = matrix(1, nrow(grid), 1),
+  x_rho =  matrix(0, nrow(grid), 1),
+  nspline = length(gamDat$jags.data$zero),
   x_gam = gamDat$jags.data$X,
   S1 = gamDat$jags.data$S1,
-  effort = effort,
-  pa_protocole = rep(1, nrow(paDat)),
-  po_pixel = poDat$pixel,
-  pa_pixel = paDat$pixel,
-  y = paDat$y,
-  K = paDat$K,
-  ones = poDat$ones,
-  zero = gamDat$jags.data$zero,
-  cste = 1000
+  zero = gamDat$jags.data$zero
 )
 
 inits <- foreach(i = 1:4) %do% {
@@ -175,21 +135,26 @@ inits <- foreach(i = 1:4) %do% {
 
 ## FIT ## 
 
-N.CHAINS = 4
+### Params ---------------------------------------------------------------------
 
-ADAPT = 500
-BURNIN = 1000
-SAMPLE = 1000
-THIN = 1
+jagsPar <- list(N.CHAINS = 4,
+                ADAPT = 500,
+                BURNIN = 1000,
+                SAMPLE = 1000,
+                THIN = 1)
+
+### Call jags ------------------------------------------------------------------
+
+## Integrated Species Distribution Model (PA + PO) ##
 
 mod <- jags.model(
-  file = "src/JAGS/IntSDMgam_JAGSmod.R",
+  file = "src/JAGS/JAGSmod_bis.R",
   data = data.list,
   inits = inits,
-  n.chains = N.CHAINS,
-  n.adapt = ADAPT)
+  n.chains = jagsPar$N.CHAINS,
+  n.adapt = jagsPar$ADAPT)
 
-update(mod, BURNIN)
+update(mod, jagsPar$BURNIN)
 
 mcmc <- coda.samples(
   mod,
@@ -203,10 +168,14 @@ mcmc <- coda.samples(
     "beta_thin",
     "lambda_gam"
   ),
-  n.iter = SAMPLE,
-  thin = THIN
+  n.iter = jagsPar$SAMPLE,
+  thin = jagsPar$THIN
 )
+
+rm(mod, jagsPar, inits)
 
 out <- as.matrix(as.mcmc.list(mcmc), chains = T)
 
-saveRDS(out, "out/simulateMod.rds")
+outpath <- paste0("out/","Simulated", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
+
+save.image(file=outpath)
