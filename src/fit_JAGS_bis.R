@@ -165,7 +165,7 @@ inits <- foreach(i = 1:4) %do% {
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN MODEL ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Params ---------------------------------------------------------------------
 
-jagPar <- list(N.CHAINS = 4,
+jagsPar <- list(N.CHAINS = 4,
                ADAPT = 500,
                BURNIN = 1000,
                SAMPLE = 1000,
@@ -179,10 +179,10 @@ mod <- jags.model(
   file = "src/JAGS/JAGSmod_bis.R",
   data = data.list,
   inits = inits,
-  n.chains = jagPar$N.CHAINS,
-  n.adapt = jagPar$ADAPT)
+  n.chains = jagsPar$N.CHAINS,
+  n.adapt = jagsPar$ADAPT)
 
-update(mod, jagPar$BURNIN)
+update(mod, jagsPar$BURNIN)
 
 mcmc <- coda.samples(
   mod,
@@ -196,14 +196,14 @@ mcmc <- coda.samples(
     "beta_thin",
     "lambda_gam"
   ),
-  n.iter = jagPar$SAMPLE,
-  thin = jagPar$THIN
+  n.iter = jagsPar$SAMPLE,
+  thin = jagsPar$THIN
 )
 
 rm(mod, jagsPar, inits)
 
 out <- as.matrix(as.mcmc.list(mcmc), chains = T)
 
-outpath <- paste0("out/","Mod_", paste(Sys.time()),".rds")
+outpath <- paste0("out/","Mod_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
 
 save.image(file=outpath)
