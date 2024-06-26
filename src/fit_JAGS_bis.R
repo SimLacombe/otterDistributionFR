@@ -10,7 +10,7 @@ rm(list = ls())
 
 source("src/functions/jags_ini_bis.R")
 
-Crop Paris + NE
+# Crop Paris + NE
 REGIONS <- c("72", "83", "25", "26", "53",
              "24", "43", "23", "91",
              "74", "73", "52",
