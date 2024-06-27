@@ -10,7 +10,7 @@ library(coda)
 
 rm(list = ls())
 
-source("src/functions/simulate_fcts.r")
+source("src/functions/simulate_fcts.R")
 source("src/functions/jags_ini_bis.R")
 
 years <- 1:5
