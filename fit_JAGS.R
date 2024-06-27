@@ -11,10 +11,13 @@ rm(list = ls())
 source("src/functions/jags_ini.R")
 
 # Crop Paris + NE
-REGIONS <- c("72", "83", "25", "26", "53",
-             "24", "43", "23", "91",
-             "74", "73", "52",
-             "54", "93", "82")
+# REGIONS <- c("72", "83", "25", "26", "53",
+#              "24", "43", "23", "91",
+#              "74", "73", "52",
+#              "54", "93", "82")
+
+# Br + PdL + Centre + Basse Normandie
+REGIONS <- c("52", "53"," 24", "25")
 
 TIMEPERIOD <- 1 #years
 
@@ -169,7 +172,7 @@ inits <- foreach(i = 1:4) %do% {
 
 N.CHAINS = 4
 
-ADAPT = 500
+ADAPT = 50
 BURNIN = 1000
 SAMPLE = 1000
 THIN = 1
@@ -178,12 +181,12 @@ THIN = 1
 
 ## Integrated Species Distribution Model (PA + PO) ##
 
-mod <- jags.model(
+system.time(mod <- jags.model(
   file = "src/JAGS/IntSDMgam_JAGSmod.R",
   data = data.list,
   inits = inits,
   n.chains = N.CHAINS,
-  n.adapt = ADAPT)
+  n.adapt = ADAPT))
 
 update(mod, BURNIN)
 
