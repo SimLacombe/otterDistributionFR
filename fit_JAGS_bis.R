@@ -11,13 +11,13 @@ rm(list = ls())
 source("src/functions/jags_ini_bis.R")
 
 # Crop Paris + NE
-REGIONS <- c("72", "83", "25", "26", "53",
-             "24", "43", "23", "91",
-             "74", "73", "52",
-             "54", "93", "82")
+# REGIONS <- c("72", "83", "25", "26", "53",
+#              "24", "43", "23", "91",
+#              "74", "73", "52",
+#              "54", "93", "82")
 
 # Br + PdL + Centre + Basse Normandie
-# REGIONS <- c("52", "53"," 24", "25")
+REGIONS <- c("52", "53"," 24", "25")
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA AND COVS ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Load data ------------------------------------------------------------------
@@ -135,7 +135,9 @@ gamDat$jags.ini$b[1] <- -4.6 #log area of cells
 
 data.list <- list(
   npxt = nrow(ISDM_dat),
-  npixel = nrow(L93_grid),
+  pxts_pa = which(ISDM_dat$K>0),
+  pxts_po = which(ISDM_dat$ypo>0),
+  npo = length(which(ISDM_dat$ypo>0)),
   nyear = length(unique(ISDM_dat$t)),
   px = ISDM_dat$px,
   t = ISDM_dat$t,
@@ -155,7 +157,10 @@ data.list <- list(
   nspline = length(gamDat$jags.data$zero),
   x_gam = gamDat$jags.data$X,
   S1 = gamDat$jags.data$S1,
-  zero = gamDat$jags.data$zero
+  zero = gamDat$jags.data$zero,
+  ones = rep(1, nrow(ISDM_dat)),
+  logfact = log(factorial(1:max(ISDM_dat$ypo))),
+  cste = 1000
 )
 
 inits <- foreach(i = 1:4) %do% {
@@ -172,8 +177,6 @@ jagsPar <- list(N.CHAINS = 4,
                THIN = 1)
 
 ### Call jags ------------------------------------------------------------------
-
-## Integrated Species Distribution Model (PA + PO) ##
 
 mod <- jags.model(
   file = "src/JAGS/JAGSmod_bis.R",

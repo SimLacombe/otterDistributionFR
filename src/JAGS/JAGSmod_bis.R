@@ -21,11 +21,6 @@
   # - x_gam : numeric matrix(npx, nsplines) - matrix of spline values
   # - S1 : numeric matrix(nsplines, nsplines) - covariance matrix for the spline coefficients
   # - zero : numeric matrix(nsplines, nsplines) - matrix of zeroes
-
-### INIT
-# - lambda : latent space
-  
-  
     
 model{
   ## LATENT MODEL ## 
@@ -36,22 +31,28 @@ model{
   }
   
   ## OBSERVATION MODEL MODEL ##
-  for(pxt in 1:npxt){
+  for(pxt in pxts_pa){ 
     #1. Presence absence
-    ypa[pxt] ~ dbin(z[pxt] * rho[px[pxt], pa_protocol[pxt]], K[pxt ])
-    
-    # 2. Presence only
-    ypo[pxt] ~ dpois(lambda[pxt] * thin_prob[px[pxt], t[pxt]] * is_po_sampled[pxt])
+    ypa[pxt] ~ dbin(z[pxt] * rho[pxt, pa_protocol[pxt]], K[pxt])
+  }
+  
+  # 2. Presence only
+  po_denominator <- inprod(lambda[1:npxt], thin_prob[1:npxt]) / npo
+  for(pxt in pxts_po){   
+    ones[pxt] ~ dbern(
+      exp(
+        log((lambda[pxt]*thin_prob[pxt])**ypo[pxt]) -
+          logfact[ypo[pxt]] -
+          log(po_denominator)
+      ) / cste
+    )
   }
   
   ## LINEAR PREDICTORS
-  for(pixel in 1:npixel){
-    for(t in 1:nyear){
-      # thin_prob[pixel, t] <- ilogit(inprod(x_thin[pixel,], beta_thin)) * effort[pixel, t]
-      thin_prob[pixel, t] <- ilogit(inprod(x_thin[pixel,], beta_thin))
-    }
+  for(pxt in 1:npxt){
+    thin_prob[pxt] <- ilogit(inprod(x_thin[px[pxt], ], beta_thin)) * is_po_sampled[pxt]
     for(protocol in 1:nprotocols){
-      rho[pixel, protocol] <- ilogit(inprod(x_rho[pixel, ], beta_rho) + beta_rho_protocol[protocol])
+      rho[pxt, protocol] <- ilogit(inprod(x_rho[px[pxt], ], beta_rho) + beta_rho_protocol[protocol])
     }
   }
   
