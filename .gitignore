@@ -11,3 +11,4 @@ packagetoMESOLR/*
 !data/map_fr.rds
 !data/L9310x10grid.rds
 !data/samplingEffort.rds
+.Rproj.user
