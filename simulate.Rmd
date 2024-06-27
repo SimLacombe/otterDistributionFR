@@ -35,6 +35,9 @@ grid.filename <- "data/L9310x10grid.rds"
 grid <- readRDS(grid.filename) %>%
   st_as_sf(crs = 2154)
 
+grid$px <- 1:nrow(grid)
+grid$logArea <- log(as.numeric(st_area(grid)) / 1000 ** 2)
+
 # get sampling effort
 effort.filename <- "data/samplingEffort.rds"
 effort <- readRDS(effort.filename) 
@@ -96,87 +99,45 @@ ggplot(simDat) +
 
 ## 2. Simulate observation data
 
-### A. Presence only data 
-
-```{r presence only data}
+```{r}
 
 simDat$effort <- c(effort)
 
-# 1. Generate observations (only where effort = 1)
-poDat <- simDat %>% 
-  st_drop_geometry %>%
-  rowwise() %>%
-  mutate(npo = rpois(1, lambda * b * effort)) %>%
-  uncount(npo)
-
-# 2. Add random coordinates within the grid cell for convenience when plotting
-poDat <- poDat %>%
-  rowwise() %>% 
-  mutate(lon = lon + runif(1, -5000, 5000),
-         lat = lat + runif(1, -5000, 5000)) %>%
-  select(lon, lat, year, gridCell)
-
-ggplot(simDat) + 
-  geom_sf(aes(fill = lambda), col = NA) +
-  geom_sf(data = st_as_sf(poDat, coords = c("lon", "lat"), crs = 2154), size = .3) +
-  facet_wrap(~year) + 
-  theme_bw()
-
-```
-
-### B. Presence absence data 
-
-```{r presence absence data}
-
-# 1. get psi and derive latent occupancy z
-# 2. get K the number of visits per cell (0.2 is the proba that a cell is visited, average number of visits is 3)
+b <- 0.5
+rho <- 0.5
 
 simDat <- simDat %>% 
   rowwise() %>%
   mutate(psi = 1 - exp(-lambda),
          z = rbinom(1, 1, psi),
-         K = rbinom(1, 1, 0.2) * (rpois(1,2) + 1))
-
-# 3. Crop to the effort matrix and generate observations
-
-paDat <- simDat %>%
-  filter(K>0, effort == 1) %>%
-  rowwise() %>%
-  mutate(y = rbinom(1, K, z * rho)) %>%
-  select(year, gridCell, K, y)
-
-ggplot(simDat) + 
-  geom_sf(aes(fill = lambda), col = NA)+
-  ggnewscale::new_scale_fill()+
-  geom_sf(data = paDat, aes(fill = y > 0)) + 
-  facet_wrap(~year) + 
-  theme_bw()
+         K = rbinom(1, 1, 0.2) * (rpois(1,2) + 1),
+         ypa = rbinom(1, K, z * rho),
+         ypo = rpois(1, lambda * b * effort)) %>%
+  filter(effort>0 | K>0)
 
 ```
 
+```{r plot simulated data}
+
+ggplot(simDat) + 
+  geom_sf(aes(fill = ypo), col = NA)+
+  facet_wrap(~year) + 
+  theme_bw() +
+  ggtitle("Nb of presence only obs. per px")
+
+ggplot(simDat %>% filter(K>0)) + 
+  geom_sf(aes(fill = sign(ypa)), col = NA)+
+  facet_wrap(~year) + 
+  theme_bw() +
+  ggtitle("Summary of presence-absence surveys")
+
+```
 
 ## 3. Format data to run the model 
 
 ```{r format data for JAGS, warning=FALSE}
-# 1.  get grid 
-grid$intercept <- 1
-grid$logArea <- log(as.numeric(st_area(grid)) / 1000 ** 2)
 
-# 2. format paDat
-paDat <- paDat %>% 
-  mutate(pixel = pmatch(gridCell, grid$gridCell, duplicates.ok = TRUE))
-
-npa <- unname(c(table(paDat$year)))
-paIdxs <- c(0, cumsum(npa))
-
-# 3. format poDat 
-poDat <- poDat %>% 
-  mutate(pixel = pmatch(gridCell, grid$gridCell, duplicates.ok = TRUE),
-         ones = 1)
-npo <- unname(c(table(poDat$year)))
-poIdxs <- c(0, cumsum(npo))
-
-# 4. GAM stuff 
+# GAM stuff 
 NSPLINES = 20
 
 jags.file <- "src/JAGS/test.jags"
@@ -208,35 +169,29 @@ gamDat$jags.ini$b[1] <- -4.6 #log area of cells
 
 # 5. Create data list
 
-npixel <- nrow(grid)
-nperiod <- length(unique(paDat$year))
-
 data.list <- list(
-  cell_area = grid$logArea,
-  npixel = npixel,
-  nyear = nperiod,
+  npxt = nrow(simDat),
+  npixel = nrow(grid),
+  nyear = length(unique(simDat$year)),
+  px = simDat$px,
+  t = simDat$year,
+  ypa = simDat$ypa,
+  K = simDat$K,
+  ypo = simDat$ypo,
+  is_po_sampled = simDat$effort,
   nprotocols = 1,
-  nspline = length(gamDat$jags.data$zero),
-  npo = npo,
-  po.idxs = poIdxs,
-  pa.idxs = paIdxs,
+  pa_protocol = rep(1, nrow(simDat)),
   ncov_lam = 1,
   ncov_thin = 1,
   ncov_rho = 1,
-  x_latent =  matrix(0, npixel, 1),
-  x_thin = matrix(grid$intercept, npixel, 1),
-  x_rho =  matrix(grid$intercept, npixel, 1),
+  cell_area = simDat$logArea,
+  x_latent =  matrix(0, nrow(grid), 1),
+  x_thin = matrix(1, nrow(grid), 1),
+  x_rho =  matrix(0, nrow(grid), 1),
+  nspline = length(gamDat$jags.data$zero),
   x_gam = gamDat$jags.data$X,
   S1 = gamDat$jags.data$S1,
-  effort = effort,
-  pa_protocole = rep(1, nrow(paDat)),
-  po_pixel = poDat$pixel,
-  pa_pixel = paDat$pixel,
-  y = paDat$y,
-  K = paDat$K,
-  ones = poDat$ones,
-  zero = gamDat$jags.data$zero,
-  cste = 1000
+  zero = gamDat$jags.data$zero
 )
 
 inits <- foreach(i = 1:4) %do% {
@@ -248,21 +203,26 @@ inits <- foreach(i = 1:4) %do% {
 
 ```{r FIT}
 
-# N.CHAINS = 4
-# 
-# ADAPT = 500
-# BURNIN = 1000
-# SAMPLE = 1000
-# THIN = 1
-# 
+### Params ---------------------------------------------------------------------
+
+jagsPar <- list(N.CHAINS = 4,
+                ADAPT = 500,
+                BURNIN = 1000,
+                SAMPLE = 1000,
+                THIN = 1)
+
+### Call jags ------------------------------------------------------------------
+
+## Integrated Species Distribution Model (PA + PO) ##
+
 # mod <- jags.model(
-#   file = "src/JAGS/IntSDMgam_JAGSmod.R",
+#   file = "src/JAGS/JAGSmod_bis.R",
 #   data = data.list,
 #   inits = inits,
-#   n.chains = N.CHAINS,
-#   n.adapt = ADAPT)
+#   n.chains = jagsPar$N.CHAINS,
+#   n.adapt = jagsPar$ADAPT)
 # 
-# update(mod, BURNIN)
+# update(mod, jagsPar$BURNIN)
 # 
 # mcmc <- coda.samples(
 #   mod,
@@ -276,12 +236,19 @@ inits <- foreach(i = 1:4) %do% {
 #     "beta_thin",
 #     "lambda_gam"
 #   ),
-#   n.iter = SAMPLE,
-#   thin = THIN
+#   n.iter = jagsPar$SAMPLE,
+#   thin = jagsPar$THIN
 # )
-# saveRDS(out, "out/simulateMod.rds")
+# 
+# rm(mod, jagsPar, inits)
+# 
+# out <- as.matrix(as.mcmc.list(mcmc), chains = T)
+# 
+# outpath <- paste0("out/","Simulated", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
+# 
+# save.image(file=outpath)
 
-out <- readRDS("out/simulateMod_bis.rds") 
+load("out/Simulated20240626_203646.RData")
 ```
 
 ## 5. Plot output
@@ -291,42 +258,43 @@ out <- readRDS("out/simulateMod_bis.rds")
 ```{r create lam dataframe, message=FALSE}
 
 bbb <- out[, grep("b\\[", colnames(out))]
-ll <- array(NA, dim = c(nrow(bbb), nrow(grid), nperiod))
 
-for (i in 1:nrow(ll)) {
-  ll[i, , ] <-
-    gamDat$jags.data$X %*% matrix(bbb[i, ], nrow = NSPLINES, ncol = nperiod) + matrix(rep(grid$logArea, nperiod),
-                                                                                      nrow = nrow(grid),
-                                                                                      ncol = nperiod)
-}
+ll <- map(seq_along(unique(simDat$year)), function(.t){
+  simDat <- filter(simDat, year == .t)
+  bbb[,(1:20) + (.t-1)*20] %*% t(gamDat$jags.data$X[simDat$px,]) + matrix(rep(simDat$logArea, nrow(out)),
+                                                                              nrow = nrow(out),
+                                                                              ncol = nrow(simDat),
+                                                                              byrow = TRUE)
+})
 
-l <- exp(apply(ll, c(2, 3), mean))
+rm(bbb)
 
-rm("bbb", "ll")
+ll <- reduce(ll, cbind)
 
-latent.df <-
-  data.frame(
-    gridCell = rep(grid$gridCell, nperiod),
-    psi = 1 - exp(-c(l)),
-    period = rep(years, each = nrow(l))
-  ) %>%
-  left_join(grid, .) %>%
-  group_by(gridCell) %>% 
-  mutate(dpsi = psi-lag(psi)) %>%
-  ungroup()
+simDat$estLam <- apply(exp(ll), 2, mean)
+simDat$sdLam <- apply(exp(ll), 2, sd)
+
+rm(ll)
+
+simDat$estPsi <- 1 - exp(-simDat$estLam)
+simDat <- simDat %>% 
+  group_by(px) %>%
+  arrange(year) %>%
+  mutate(dpsi = estPsi - lag(estPsi, 1))
 ```
 
 ```{r plot latent}
 
 ggplot() +
-  geom_sf(data = latent.df, aes(fill = psi), col = NA, alpha = .85) +
+  geom_sf(data = grid, fill = "lightgrey", col = NA) +
+  geom_sf(data = simDat, aes(fill = estPsi), col = NA) +
   scale_fill_gradient2(
     low = "white",
     mid = "orange",
     high = "darkred",
     midpoint = .5
-  )  +
-  facet_wrap( ~ period) +
+  ) +
+  facet_wrap( ~ year) +
   theme_bw()
 
 ```
@@ -335,8 +303,7 @@ ggplot() +
 
 ```{r get posteriors}
 b_est <- out[, grep("beta_thin", colnames(out))]
-rho_est <- out[, grep("beta_rho", colnames(out))] %>%
-  apply(1, sum)
+rho_est <- out[, grep("beta_rho_protocol", colnames(out))]
 
 post <- data.frame(value = invlogit(c(b_est, rho_est)),
                   param = rep(c("b", "rho"), each = length(b_est)))
