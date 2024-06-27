@@ -11,13 +11,13 @@ rm(list = ls())
 source("src/functions/jags_ini_bis.R")
 
 # Crop Paris + NE
-# REGIONS <- c("72", "83", "25", "26", "53",
-#              "24", "43", "23", "91",
-#              "74", "73", "52",
-#              "54", "93", "82")
+REGIONS <- c("72", "83", "25", "26", "53",
+             "24", "43", "23", "91",
+             "74", "73", "52",
+             "54", "93", "82")
 
 # Br + PdL + Centre + Basse Normandie
-REGIONS <- c("52", "53"," 24", "25")
+# REGIONS <- c("52", "53"," 24", "25")
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA AND COVS ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Load data ------------------------------------------------------------------
@@ -144,7 +144,6 @@ data.list <- list(
   ypa = ISDM_dat$ypa,
   K = ISDM_dat$K,
   ypo = ISDM_dat$ypo,
-  is_po_sampled = ISDM_dat$is_po_sampled,
   nprotocols = length(unique(ISDM_dat$protocol)),
   pa_protocol = ISDM_dat$protocol,
   ncov_lam = 1,

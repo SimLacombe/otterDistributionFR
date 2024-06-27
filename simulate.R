@@ -106,14 +106,15 @@ gamDat$jags.ini$b[1] <- -4.6 #log area of cells
 
 data.list <- list(
   npxt = nrow(simDat),
-  npixel = nrow(grid),
+  pxts_pa = which(simDat$K>0),
+  pxts_po = which(simDat$ypo>0),
+  pxts_po_no = which(simDat$ypo==0&simDat$effort==1),
   nyear = length(unique(simDat$year)),
   px = simDat$px,
   t = simDat$year,
   ypa = simDat$ypa,
   K = simDat$K,
   ypo = simDat$ypo,
-  is_po_sampled = simDat$effort,
   nprotocols = 1,
   pa_protocol = rep(1, nrow(simDat)),
   ncov_lam = 1,
