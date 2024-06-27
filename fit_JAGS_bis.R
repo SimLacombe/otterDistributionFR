@@ -169,19 +169,19 @@ inits <- foreach(i = 1:4) %do% {
 ### Params ---------------------------------------------------------------------
 
 jagsPar <- list(N.CHAINS = 4,
-               ADAPT = 50,
+               ADAPT = 500,
                BURNIN = 1000,
                SAMPLE = 1000,
                THIN = 1)
 
 ### Call jags ------------------------------------------------------------------
 
-system.time(mod <- jags.model(
+mod <- jags.model(
   file = "src/JAGS/JAGSmod_bis.R",
   data = data.list,
   inits = inits,
   n.chains = jagsPar$N.CHAINS,
-  n.adapt = jagsPar$ADAPT))
+  n.adapt = jagsPar$ADAPT)
 
 update(mod, jagsPar$BURNIN)
 
