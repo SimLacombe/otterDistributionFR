@@ -31,26 +31,22 @@ model{
   }
   
   ## OBSERVATION MODEL MODEL ##
+  #1. Presence absence
   for(pxt in pxts_pa){ 
-    #1. Presence absence
     ypa[pxt] ~ dbin(z[pxt] * rho[pxt, pa_protocol[pxt]], K[pxt])
   }
   
   # 2. Presence only
-  po_denominator <- inprod(lambda[1:npxt], thin_prob[1:npxt]) / npo
-  for(pxt in pxts_po){   
-    ones[pxt] ~ dbern(
-      exp(
-        log((lambda[pxt]*thin_prob[pxt])**ypo[pxt]) -
-          logfact[ypo[pxt]] -
-          log(po_denominator)
-      ) / cste
-    )
+  for(pxt in pxts_po){ 
+    ypo[pxt] ~ dpois(lambda[pxt] * thin_prob[pxt])
+  }
+  for(pxt in pxts_po_no){ 
+    ones[pxt] ~ dbern(exp(-lambda[pxt] * thin_prob[pxt]))
   }
   
   ## LINEAR PREDICTORS
   for(pxt in 1:npxt){
-    thin_prob[pxt] <- ilogit(inprod(x_thin[px[pxt], ], beta_thin)) * is_po_sampled[pxt]
+    thin_prob[pxt] <- ilogit(inprod(x_thin[px[pxt], ], beta_thin))
     for(protocol in 1:nprotocols){
       rho[pxt, protocol] <- ilogit(inprod(x_rho[px[pxt], ], beta_rho) + beta_rho_protocol[protocol])
     }

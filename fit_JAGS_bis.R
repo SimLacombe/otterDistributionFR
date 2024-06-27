@@ -137,7 +137,7 @@ data.list <- list(
   npxt = nrow(ISDM_dat),
   pxts_pa = which(ISDM_dat$K>0),
   pxts_po = which(ISDM_dat$ypo>0),
-  npo = length(which(ISDM_dat$ypo>0)),
+  pxts_po_no = which(ISDM_dat$ypo==0&ISDM_dat$is_po_sampled==1),
   nyear = length(unique(ISDM_dat$t)),
   px = ISDM_dat$px,
   t = ISDM_dat$t,
@@ -158,9 +158,7 @@ data.list <- list(
   x_gam = gamDat$jags.data$X,
   S1 = gamDat$jags.data$S1,
   zero = gamDat$jags.data$zero,
-  ones = rep(1, nrow(ISDM_dat)),
-  logfact = log(factorial(1:max(ISDM_dat$ypo))),
-  cste = 1000
+  ones = rep(1, nrow(ISDM_dat))
 )
 
 inits <- foreach(i = 1:4) %do% {
@@ -171,19 +169,19 @@ inits <- foreach(i = 1:4) %do% {
 ### Params ---------------------------------------------------------------------
 
 jagsPar <- list(N.CHAINS = 4,
-               ADAPT = 500,
+               ADAPT = 50,
                BURNIN = 1000,
                SAMPLE = 1000,
                THIN = 1)
 
 ### Call jags ------------------------------------------------------------------
 
-mod <- jags.model(
+system.time(mod <- jags.model(
   file = "src/JAGS/JAGSmod_bis.R",
   data = data.list,
   inits = inits,
   n.chains = jagsPar$N.CHAINS,
-  n.adapt = jagsPar$ADAPT)
+  n.adapt = jagsPar$ADAPT))
 
 update(mod, jagsPar$BURNIN)
 
