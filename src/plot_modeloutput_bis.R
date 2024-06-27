@@ -4,7 +4,7 @@ library(LaplacesDemon)
 
 rm(list = ls())
 
-path <-"out/Mod_20240626_130306.RData"
+path <-"out/Mod_20240627_045116.RData"
   
 load(path)
 
@@ -45,6 +45,10 @@ ISDM_dat$sdLam <- apply(exp(ll), 2, sd)
 rm(ll)
 
 ISDM_dat$estPsi <- 1 - exp(-ISDM_dat$estLam)
+ISDM_dat <- ISDM_dat %>% 
+  group_by(px) %>%
+  arrange(t) %>%
+  mutate(dpsi = estPsi - lag(estPsi, 1))
 
 ### Beta_thin ------------------------------------------------------------------
 
@@ -69,8 +73,9 @@ ggplot() +
   facet_wrap( ~ t) +
   theme_bw()
 
-ggplot() +
-  geom_sf(data = latent.df, aes(fill = dpsi), col = NA, alpha = .85) +
+ggplot(ISDM_dat %>% filter(t>1)) +
+  geom_sf(data = L93_grid, fill = "lightgrey", col = NA) +
+  geom_sf(aes(fill = dpsi), col = NA, alpha = .85) +
   scale_fill_gradient2(
     low = "red",
     mid = "white",
@@ -81,6 +86,7 @@ ggplot() +
   theme_bw()
 
 ggplot() +
+  geom_sf(data = L93_grid, fill = "lightgrey", col = NA) +
   geom_sf(data = ISDM_dat, aes(fill = estZ), col = NA, alpha = .85) +
   scale_fill_gradient2(
     low = "white",
@@ -90,48 +96,3 @@ ggplot() +
   )  +
   facet_wrap( ~ t) +
   theme_bw()
-
-ggplot(latent.df.peryear) +
-  geom_line(aes(x = as.numeric(as.factor(period)), y = psi.med)) +
-  geom_ribbon(aes(x = as.numeric(as.factor(period)), ymin = psi.inf, ymax = psi.sup),
-              alpha = 0.5,
-              fill = "transparent",
-              col = "black") +
-  theme_bw()
-
-ggplot(beta_reg.df) +
-  geom_pointrange(
-    aes(
-      x = region,
-      y = beta_reg.med,
-      ymin = beta_reg.inf,
-      ymax = beta_reg.sup,
-      color = region
-    ),
-    show.legend = F
-  ) +
-  geom_hline(aes(yintercept = 0)) +
-  theme_bw() +
-  facet_wrap( ~ period)
-
-
-ggplot(rho.df) +
-  geom_violin(aes(
-    x = protocole,
-    y = rho,
-    fill = protocole,
-    group = protocole
-  ),
-  show.legend = F) +
-  geom_hline(aes(yintercept = 0)) +
-  theme_bw()
-
-eff.df <- cbind(L93_grid, effort)
-colnames(eff.df)[7:21] <- paste0("yr", 1:15)
-eff.df <- pivot_longer(eff.df, cols = all_of(paste0("yr", 1:15)),
-                       names_to = "year", values_to = "effort") %>%
-  mutate(year = factor(year, levels = paste0("yr", 1:15)))
-
-ggplot(eff.df) +
-  geom_sf(aes(fill = effort)) +
-  facet_wrap(~year)
