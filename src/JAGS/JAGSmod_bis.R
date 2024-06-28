@@ -41,7 +41,7 @@ model{
   for(pxt in pxts_po){ 
     ypo[pxt] ~ dpois(lambda[pxt] * thin_prob[pxt])
   }
-  # When ypo = 0 I explicitely calculate the ll of a poisson variable (a lot of data points, saves a lot of time)
+  # When ypo = 0, I explicitely calculate the ll of a poisson variable (saves a lot of time)
   for(pxt in pxts_po_no){ 
     ones[pxt] ~ dbern(exp(-lambda[pxt] * thin_prob[pxt]))
   }
