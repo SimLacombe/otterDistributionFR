@@ -91,8 +91,9 @@ ISDM_dat <- modify(ISDM_dat, ~ ifelse(is.na(.x), 0, .x))
 ISDM_dat <- ISDM_dat %>%
   filter(is_po_sampled|sign(K)) %>% 
   mutate(t = as.numeric(as.factor(year)),
-         protocol = as.numeric(as.factor(protocol))) %>%
-  select(px, t, is_po_sampled, K, ypa, protocol, ypo, logArea)
+         protocol.fact = as.numeric(as.factor(protocol)),
+         region = as.numeric(as.factor(code_insee))) %>%
+  select(px, t, code_insee, region, is_po_sampled, K, ypa, protocol, protocol.fact, ypo, logArea)
 
 ###  plot extent ---------------------------------------------------------------
 
@@ -139,19 +140,21 @@ data.list <- list(
   pxts_po = which(ISDM_dat$ypo>0),
   pxts_po_no = which(ISDM_dat$ypo==0&ISDM_dat$is_po_sampled==1),
   nyear = length(unique(ISDM_dat$t)),
+  nregion = length(unique(ISDM_dat$code_insee)),
   px = ISDM_dat$px,
   t = ISDM_dat$t,
+  region = ISDM_dat$region,
   ypa = ISDM_dat$ypa,
   K = ISDM_dat$K,
   ypo = ISDM_dat$ypo,
   nprotocols = length(unique(ISDM_dat$protocol)),
-  pa_protocol = ISDM_dat$protocol,
+  pa_protocol = ISDM_dat$protocol.fact,
   ncov_lam = 1,
   ncov_thin = 1,
   ncov_rho = 1,
   cell_area = ISDM_dat$logArea,
   x_latent =  matrix(0, nrow(L93_grid), 1),
-  x_thin = matrix(1, nrow(L93_grid), 1),
+  x_thin = matrix(0, nrow(L93_grid), 1),
   x_rho =  matrix(0, nrow(L93_grid), 1),
   nspline = length(gamDat$jags.data$zero),
   x_gam = gamDat$jags.data$X,

@@ -48,7 +48,7 @@ model{
   
   ## LINEAR PREDICTORS
   for(pxt in 1:npxt){
-    thin_prob[pxt] <- ilogit(inprod(x_thin[px[pxt], ], beta_thin))
+    thin_prob[pxt] <- ilogit(inprod(x_thin[px[pxt], ], beta_thin)) + beta_region[region[pxt], t[pxt]]
     for(protocol in 1:nprotocols){
       rho[pxt, protocol] <- ilogit(inprod(x_rho[px[pxt], ], beta_rho) + beta_rho_protocol[protocol])
     }
@@ -72,6 +72,12 @@ model{
     beta_rho_protocol[protocol] ~ dnorm(0, 1/(sigma_protocol*sigma_protocol))
   }
   
+  for(reg in 1:nregion){
+    for(yr in 1:nyear){
+      beta_region[reg, yr] ~ dnorm(0, 1/(sigma_region*sigma_region))
+    }
+  }
+  
   ## PRIORS ##
   for(cov in 1:ncov_lam){
     beta_latent[cov] ~ dnorm(0, 0.01)
@@ -84,6 +90,7 @@ model{
   }
 
   sigma_protocol ~ dunif(0,100)
+  sigma_region ~ dunif(0,100)
   
   lambda_gam ~ dgamma(.05,.005)
   tau_gam ~ dgamma(1,1)
