@@ -1,27 +1,3 @@
-### DATA
-  # - npx : integer - number of data points (number of pixel x year sampled)
-  # - npixel : integer - total number of pixels in the study area (sampled or not)
-  # - nyear : integer - number of years
-  # - px : integer(length = npx) - pixel index of each pixel x year
-  # - t : integer(length = npx) - time period of each pixel x year
-  # - ypa : integer(length = npx) - number of pa observations for each pixel x year
-  # - K : integer(length = npx) - number of pa visits for each pixel x year
-  # - ypo : integer(length = npx) - number of po observations for each pixel x year
-  # - is_po_sampled : integer(length = npx) - is the pixel x year sampled for presence only ? (0/1)
-  # - nprotocols : integer - number of pa protocols 
-  # - pa_protocol : integer(length = npx) - pa protocol used in each pixel x year
-  # - ncov_lam : integer - number of covariates for lambda
-  # - ncov_thin : integer - number of covariates for the thinning probability
-  # - ncov_rho : integer - number of covariates for rho
-  # - cell_area : numeric(length = npx) - log area of each pixel 
-  # - x_latent : numeric matrix(npx, ncov_lam) - covariate matrix for lambda
-  # - x_thin : numeric matrix(npx, ncov_lam) - covariate matrix for the thin. prob. 
-  # - x_rho : numeric matrix(npx, ncov_lam) - covariate matrix for rho
-  # - nsplines : integer - number of splines
-  # - x_gam : numeric matrix(npx, nsplines) - matrix of spline values
-  # - S1 : numeric matrix(nsplines, nsplines) - covariance matrix for the spline coefficients
-  # - zero : numeric matrix(nsplines, nsplines) - matrix of zeroes
-    
 model{
   ## LATENT MODEL ## 
   for(pxt in 1:npxt){
@@ -37,11 +13,11 @@ model{
   }
   
   # 2. Presence only
-  # when ypo > 0 I use a Poisson variable
+  # when ypo > 0 I use the Poisson variable
   for(pxt in pxts_po){ 
     ypo[pxt] ~ dpois(lambda[pxt] * thin_prob[pxt])
   }
-  # When ypo = 0, I explicitely calculate the ll of a poisson variable (saves a lot of time)
+  # When ypo = 0, I explicitely calculate the ll of the poisson variable (saves a lot of time)
   for(pxt in pxts_po_no){ 
     ones[pxt] ~ dbern(exp(-lambda[pxt] * thin_prob[pxt]))
   }
