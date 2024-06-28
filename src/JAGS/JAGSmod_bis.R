@@ -7,17 +7,23 @@ model{
   }
   
   ## OBSERVATION MODEL MODEL ##
-  #1. Presence absence
+  #1. Presence absence 
+  # K number of visits, ypa number of positive visits
+  # pxts_pa : indices of pixels with at least one pa visit
   for(pxt in pxts_pa){ 
     ypa[pxt] ~ dbin(z[pxt] * rho[pxt, pa_protocol[pxt]], K[pxt])
   }
   
   # 2. Presence only
-  # when ypo > 0 I use the Poisson variable
+  # ypo number of po observations 
+  # when ypo > 0 I use the Poisson variable 
+  # pxts_po : indices of pixels with at least one po obs
   for(pxt in pxts_po){ 
     ypo[pxt] ~ dpois(lambda[pxt] * thin_prob[pxt])
   }
-  # When ypo = 0, I explicitely calculate the ll of the poisson variable (saves a lot of time)
+  # When ypo = 0, I explicitly give the poisson likelihood, it saves a lot of time
+  # pxts_po : indices of pixels with no po obs but with sampling for po
+  # ones : vector of 1s
   for(pxt in pxts_po_no){ 
     ones[pxt] ~ dbern(exp(-lambda[pxt] * thin_prob[pxt]))
   }
