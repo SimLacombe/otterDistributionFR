@@ -4,7 +4,7 @@ library(LaplacesDemon)
 
 rm(list = ls())
 
-path <-"out/Mod_20240627_045116.RData"
+path <-"out/Mod_20240628_002634.RData"
   
 load(path)
 
@@ -52,12 +52,25 @@ ISDM_dat <- ISDM_dat %>%
 
 ### Beta_thin ------------------------------------------------------------------
 
-bthin <- out[, grep("beta_thin", colnames(out))]
+params <- out[, grep("beta_rho_protocol", colnames(out))] %>% 
+  invlogit %>%
+  data.frame
 
-params <- data.frame(bthin = invlogit(bthin))
+colnames(params) <- paste0("p", 1:ncol(params))
+
+params <- pivot_longer(params, cols = starts_with("p"),
+                       names_to = "protocol", values_to = "prob")%>%
+  mutate(param = "rho")
+
+params <- data.frame(prob = invlogit(out[, grep("beta_thin", colnames(out))]),
+                     protocol = "b",
+                    param = "b") %>%
+  rbind(params, .)
+
 
 ggplot(params)+
-  geom_violin(aes(x = 1, y = bthin))
+  geom_violin(aes(x = protocol, y = prob, fill = param)) +
+  theme_bw()
 
 ### Plots ----------------------------------------------------------------------
 
@@ -69,18 +82,6 @@ ggplot() +
     mid = "orange",
     high = "darkred",
     midpoint = .5
-  ) +
-  facet_wrap( ~ t) +
-  theme_bw()
-
-ggplot(ISDM_dat %>% filter(t>1)) +
-  geom_sf(data = L93_grid, fill = "lightgrey", col = NA) +
-  geom_sf(aes(fill = dpsi), col = NA, alpha = .85) +
-  scale_fill_gradient2(
-    low = "red",
-    mid = "white",
-    high = "green",
-    midpoint = 0
   ) +
   facet_wrap( ~ t) +
   theme_bw()
