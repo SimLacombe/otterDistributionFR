@@ -26,56 +26,54 @@ L93_grid <- readRDS(grid.path)%>%
 # saveRDS(rivers, rivers.path)
 
 rivers.path <- "data/rivers.rds"
-lakes.path <- "data/lakes.rds"
 
-lakes <- readRDS(lakes.path)%>% 
-  st_as_sf(crs = 2154)
 rivers <- readRDS(rivers.path)%>%
   filter(ORD_CLAS <= 3) %>%
   st_as_sf(crs = 2154)
 
 ### Extract hydrological information -------------------------------------------
 
-hydroCovs <- st_intersection(rivers, L93_grid) %>%
+L93_grid <- st_intersection(rivers, L93_grid) %>%
   mutate(hydroLen = st_length(geometry)) %>%
   st_drop_geometry() %>%
   group_by(gridCell) %>%
-  summarize(hydroLen = sum(hydroLen),
-            maxDis = max(DIS_AV_CMS))
-
-### Extract lake information ---------------------------------------------------
-
-lakeCovs <- st_intersection(lakes, L93_grid) %>%
-  mutate(hydroLen = st_area(geometry)) %>%
-  st_drop_geometry() %>%
-  group_by(gridCell) %>%
-  summarize(waterBodySurface = sum(hydroLen)) 
-
-### Merge with grid dataframe --------------------------------------------------
-
-L93_grid <- L93_grid %>% 
-  left_join(hydroCovs) %>% 
-  left_join(lakeCovs)%>%
-  mutate(waterBodySurface = ifelse(is.na(waterBodySurface), 0, waterBodySurface),
-         hydroLen = ifelse(is.na(hydroLen), 0, hydroLen),
-         maxDis = ifelse(is.na(maxDis), 0, maxDis),
-         logmaxDis = log(maxDis + 0.001),
-         logWBSurf = log(waterBodySurface + 0.001))
+  summarize(hydroLen = sum(hydroLen)) %>% 
+  left_join(L93_grid, .) %>% 
+  mutate(hydroLen = ifelse(is.na(hydroLen), 0, hydroLen))
 
 ### Plot -----------------------------------------------------------------------
 
-plot.dis <- ggplot(L93_grid)+
-  geom_sf(aes(fill = logmaxDis), col = NA)+
-  theme_bw()
-
-plot.len <- ggplot(L93_grid)+
+ggplot(L93_grid)+
   geom_sf(aes(fill = hydroLen), col = NA)+
   theme_bw()
 
-plot.lakes <- ggplot(L93_grid)+
-  geom_sf(aes(fill = logWBSurf), col = NA)+
-  theme_bw()
-
-ggpubr::ggarrange(plot.dis, plot.len, plot.lakes, nrow = 1)
-
 ### Land use -------------------------------------------------------------------
+
+filenames <- list.files("data/CLC", full.names = TRUE, recursive = TRUE, pattern = "CLC12_")
+filenames <- filenames[grep(".shp", filenames)]
+
+CLC_dat <- map(filenames, read_sf) %>%
+  reduce(rbind)
+ 
+riparian_habitats <- CLC_dat %>%
+  filter(CODE_12 %in% c("311", "312", "313", "321", "322", "323")) %>%
+  # filter(CODE_12 %in% c("111", "112", "121", "122", "123", "124", "131", "132", "133", "141", "142")) %>%
+  st_intersection(st_buffer(rivers, 300))
+
+rm(CLC_dat)
+
+L93_grid <- st_intersection(riparian_habitats, L93_grid) %>%
+  mutate(ripArea = st_area(geometry)) %>%
+  st_drop_geometry() %>%
+  group_by(gridCell) %>%
+  summarize(ripArea = sum(ripArea)) %>% 
+  left_join(L93_grid, .) %>% 
+  mutate(ripArea = ifelse(is.na(ripArea), 0, ripArea))
+
+### Plot -----------------------------------------------------------------------
+
+ggplot(L93_grid)+
+  geom_sf(aes(fill = ripArea), col = NA) +
+  scale_fill_gradient(low = "darkgreen", high ="green") +
+  # scale_fill_gradient(low = "darkred", high = "lightcoral") +
+  theme_bw()
