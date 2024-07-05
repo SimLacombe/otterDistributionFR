@@ -1,8 +1,9 @@
 model{
   ## LATENT MODEL ## 
   for(pxt in 1:npxt){
-    log(lambda[pxt]) <- inprod(x_latent[px[pxt],], beta_latent) + inprod(x_gam[px[pxt], ], b[, t[pxt]]) + cell_area[px[pxt]]
-    psi[pxt] <- 1 - exp(-lambda[pxt])
+    log(lambda[pxt]) <- inprod(x_latent[px[pxt],], beta_latent) + inprod(x_gam[px[pxt], ], b[, t[pxt]])
+    log(lambda_B[pxt]) <- log(lambda[pxt]) + cell_area[px[pxt]]
+    psi[pxt] <- 1 - exp(-lambda_B[pxt])
     z[pxt] ~ dbern(psi[pxt])
   }
   
@@ -19,13 +20,13 @@ model{
   # when ypo > 0 I use the Poisson variable 
   # pxts_po : indices of pixels with at least one po obs
   for(pxt in pxts_po){ 
-    ypo[pxt] ~ dpois(lambda[pxt] * thin_prob[pxt])
+    ones[pxt] ~ dbern(exp(-lambda_B[pxt] * thin_prob[pxt]) * (lambda[pxt] * thin_prob[pxt]) ** ypo[pxt])
   }
   # When ypo = 0, I explicitly give the poisson likelihood, it saves a lot of time
   # pxts_po : indices of pixels with no po obs but with sampling for po
   # ones : vector of 1s
   for(pxt in pxts_po_no){ 
-    ones[pxt] ~ dbern(exp(-lambda[pxt] * thin_prob[pxt]))
+    ones[pxt] ~ dbern(exp(-lambda_B[pxt] * thin_prob[pxt]))
   }
   
   ## LINEAR PREDICTORS

@@ -11,13 +11,13 @@ rm(list = ls())
 source("src/functions/jags_ini_bis.R")
 
 # Crop Paris + NE
-REGIONS <- c("72", "83", "25", "26", "53",
-             "24", "43", "23", "91",
-             "74", "73", "52",
-             "54", "93", "82")
+# REGIONS <- c("72", "83", "25", "26", "53",
+#              "24", "43", "23", "91",
+#              "74", "73", "52",
+#              "54", "93", "82")
 
 # Br + PdL + Centre + Basse Normandie
-# REGIONS <- c("52", "53"," 24", "25")
+REGIONS <- c("52", "53"," 24", "25")
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA AND COVS ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Load data ------------------------------------------------------------------
@@ -171,19 +171,19 @@ inits <- foreach(i = 1:4) %do% {
 ### Params ---------------------------------------------------------------------
 
 jagsPar <- list(N.CHAINS = 4,
-               ADAPT = 500,
+               ADAPT = 10,
                BURNIN = 1000,
                SAMPLE = 1000,
                THIN = 1)
 
 ### Call jags ------------------------------------------------------------------
 
-mod <- jags.model(
+system.time(mod <- jags.model(
   file = "src/JAGS/JAGSmod_bis.R",
   data = data.list,
   inits = inits,
   n.chains = jagsPar$N.CHAINS,
-  n.adapt = jagsPar$ADAPT)
+  n.adapt = jagsPar$ADAPT))
 
 update(mod, jagsPar$BURNIN)
 

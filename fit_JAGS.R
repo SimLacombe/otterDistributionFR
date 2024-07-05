@@ -137,7 +137,7 @@ data.list <- list(
   cell_area = L93_grid$logArea,
   npixel = npixel,
   nyear = nperiod,
-  # nregion = length(unique(L93_grid$code_insee)),
+  nregion = length(unique(L93_grid$code_insee)),
   nprotocols = length(unique(paDat$protocol.fact)),
   nspline = length(gamDat$jags.data$zero),
   npo = npo,
@@ -151,7 +151,7 @@ data.list <- list(
   x_rho =  matrix(L93_grid$intercept, npixel, 1),
   x_gam = gamDat$jags.data$X,
   S1 = gamDat$jags.data$S1,
-  # region = as.numeric(as.factor(L93_grid$code_insee)),
+  region = as.numeric(as.factor(L93_grid$code_insee)),
   effort = effort,
   pa_protocole = paDat$protocol.fact,
   po_pixel = poDat$pixel,
@@ -172,7 +172,7 @@ inits <- foreach(i = 1:4) %do% {
 
 N.CHAINS = 4
 
-ADAPT = 50
+ADAPT = 10 
 BURNIN = 1000
 SAMPLE = 1000
 THIN = 1
