@@ -1,7 +1,7 @@
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA AND COVS ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Adapt effort matrix to sp and tmp resolution -------------------------------
 
-effort <- effort_full[L93_grid$code_insee %in% REGIONS, ]
+effort <- effort_full[L93_grid_full$code_insee %in% REGIONS, ]
 colnames(effort) <- paste0("yr.", 2009:2023)
 
 ### Filter the region of interest ----------------------------------------------
