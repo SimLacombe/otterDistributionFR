@@ -41,12 +41,6 @@ L93_grid <- st_intersection(rivers, L93_grid) %>%
   left_join(L93_grid, .) %>% 
   mutate(hydroLen = ifelse(is.na(hydroLen), 0, hydroLen))
 
-### Plot -----------------------------------------------------------------------
-
-ggplot(L93_grid)+
-  geom_sf(aes(fill = hydroLen), col = NA)+
-  theme_bw()
-
 ### Land use -------------------------------------------------------------------
 
 filenames <- list.files("data/CLC", full.names = TRUE, recursive = TRUE, pattern = "CLC12_")
@@ -57,8 +51,7 @@ CLC_dat <- map(filenames, read_sf) %>%
  
 riparian_habitats <- CLC_dat %>%
   filter(CODE_12 %in% c("311", "312", "313", "321", "322", "323")) %>%
-  # filter(CODE_12 %in% c("111", "112", "121", "122", "123", "124", "131", "132", "133", "141", "142")) %>%
-  st_intersection(st_buffer(rivers, 300))
+  st_intersection(st_buffer(rivers, 100))
 
 rm(CLC_dat)
 
@@ -74,6 +67,13 @@ L93_grid <- st_intersection(riparian_habitats, L93_grid) %>%
 
 ggplot(L93_grid)+
   geom_sf(aes(fill = ripArea), col = NA) +
-  scale_fill_gradient(low = "darkgreen", high ="green") +
-  # scale_fill_gradient(low = "darkred", high = "lightcoral") +
+  scale_fill_gradient(low = "#003300", high ="chartreuse4") +
   theme_bw()
+
+ggplot(L93_grid)+
+  geom_sf(aes(fill = hydroLen), col = NA)+
+  theme_bw()
+
+## Save ------------------------------------------------------------------------
+
+saveRDS(L93_grid, "data/L9310x10grid_covs")
