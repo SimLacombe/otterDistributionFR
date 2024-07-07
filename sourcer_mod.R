@@ -32,15 +32,15 @@ effort_full <- readRDS(effort.filename)
 
 ### 2. North-West --------------------------------------------------------------
 
-REGIONS <- c("52", "53"," 24", "25")
+# REGIONS <- c("52", "53"," 24", "25")
+# 
+# source("src/fit_JAGS_bis.R")
+# 
+# outpath <- paste0("out/","Mod_NO_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
+# 
+# save.image(file=outpath)
 
-source("src/fit_JAGS_bis.R")
-
-outpath <- paste0("out/","Mod_NO_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
-
-save.image(file=outpath)
-
-rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "my inits")))
+rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "my_inits")))
 
 ### 3. South-East --------------------------------------------------------------
 
@@ -52,7 +52,7 @@ outpath <- paste0("out/","Mod_SE_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData"
 
 save.image(file=outpath)
 
-rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "my inits")))
+rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "my_inits")))
 
 ### 4. East --------------------------------------------------------------
 
@@ -64,4 +64,4 @@ outpath <- paste0("out/","Mod_E_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
 
 save.image(file=outpath)
 
-rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "my inits")))
+rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "my_inits")))
