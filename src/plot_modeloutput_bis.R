@@ -4,7 +4,7 @@ library(LaplacesDemon)
 
 rm(list = ls())
 
-path <-"out/Mod_NO_20240707_230014.RData"
+path <-"out/Mod_SE_20240708_030718.RData"
   
 load(path)
 
@@ -14,7 +14,7 @@ L93_grid <- L93_grid_full %>%
   st_as_sf(crs = 2154)
 
 ISDM_dat <- L93_grid %>%
-  select(px) %>%
+  select(px, hydroLen, ripArea) %>%
   left_join(ISDM_dat, .) %>%
   st_as_sf(crs = 2154)
 
@@ -32,15 +32,22 @@ rm(zz)
 
 bbb <- out[, grep("b\\[", colnames(out))]
 
+bbl <- out[, grep("beta_latent\\[", colnames(out))]
+
 ll <- map(seq_along(unique(ISDM_dat$t)), function(.t){
-  ISDM_dat_t <- filter(ISDM_dat, t == .t)
-  bbb[,(1:20) + (.t-1)*20] %*% t(gamDat$jags.data$X[ISDM_dat_t$px,]) + matrix(rep(ISDM_dat_t$logArea, nrow(out)),
-                                                                              nrow = nrow(out),
-                                                                              ncol = nrow(ISDM_dat_t),
-                                                                              byrow = TRUE)
+  ISDM_dat_t <- ISDM_dat %>%
+    st_drop_geometry %>% 
+    filter(t == .t) 
+  
+  bbb[,(1:20) + (.t-1)*20] %*% t(gamDat$jags.data$X[ISDM_dat_t$px,]) +
+    bbl %*% t(ISDM_dat_t[, c("hydroLen", "ripArea")]) +
+    matrix(rep(ISDM_dat_t$logArea, nrow(out)),
+           nrow = nrow(out),
+           ncol = nrow(ISDM_dat_t),
+           byrow = TRUE)
 })
 
-rm(bbb)
+rm(bbb, bbl)
 
 ll <- reduce(ll, cbind)
 
