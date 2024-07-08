@@ -44,7 +44,7 @@ rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "my_i
 
 ### 3. South-East --------------------------------------------------------------
 
-REGIONS <- c("83", "91"," 73", "93", "82")
+REGIONS <- c("83", "91","73", "93", "82")
 
 source("src/fit_JAGS_bis.R")
 
