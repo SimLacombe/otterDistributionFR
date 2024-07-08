@@ -10,11 +10,7 @@ rm(list = ls())
 
 source("src/functions/jags_ini.R")
 
-# Crop Paris + NE
-REGIONS <- c("72", "83", "25", "26", "53",
-             "24", "43", "23", "91",
-             "74", "73", "52",
-             "54", "93", "82")
+REGIONS <- c("52", "53"," 24", "25")
 
 TIMEPERIOD <- 1 #years
 
@@ -36,7 +32,8 @@ effort <- readRDS(effort.filename)
 ### Plot full dataset ----------------------------------------------------------
 
 otterDat <- otterDat %>%
-  mutate(period = year %/% 4)
+  mutate(period = year) %>%
+  filter(code_insee %in% REGIONS)
 
 otterDat %>%
   filter(protocol != "PO") %>% 
@@ -44,16 +41,15 @@ otterDat %>%
   group_by(period, gridCell) %>%
   summarize(presence = any(as.logical(presence)),
             nsample = n()) %>%
-  left_join(grid[, c("geometry", "gridCell")], by = "gridCell") %>%
+  left_join(L93_grid[, c("geometry", "gridCell")], by = "gridCell") %>%
   st_as_sf %>%
   ggplot() +
-  geom_sf(data = map_FR) +
-  geom_sf(aes(fill = presence)) +
+  geom_sf(aes(fill = presence), col = NA) +
   geom_sf(data = otterDat %>% 
             filter(protocol == "PO") %>% 
             st_as_sf(coords = c("lon", "lat"),crs = 2154), aes(color = protocol), size = .25) +
   scale_fill_manual(name = "Standardized data",
-                    values = c("orange", "darkblue"),
+                    values = c("orange", "lightblue"),
                     labels = c("Unobserved", "present")) +
   scale_color_manual("Opportunistic data", values = "black", label = "present") +
   theme_bw() +
@@ -61,7 +57,7 @@ otterDat %>%
   guides(colour = guide_legend(title.position="top", title.hjust = 0.5),
          fill = guide_legend(title.position="top", title.hjust = 0.5))+
   # facet_wrap( ~ paste0(period * 4, " - ", period * 4 + 3))
-  facet_wrap( ~ year)
+  facet_wrap( ~ period)
 
 ### Plot sampled pixels  -------------------------------------------------------
 

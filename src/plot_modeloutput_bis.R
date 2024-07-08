@@ -4,9 +4,14 @@ library(LaplacesDemon)
 
 rm(list = ls())
 
-path <-"out/Mod_20240628_002634.RData"
+path <-"out/Mod_NO_20240707_230014.RData"
   
 load(path)
+
+L93_grid <- L93_grid_full %>% 
+  select(gridCell) %>%
+  left_join(L93_grid, .) %>%
+  st_as_sf(crs = 2154)
 
 ISDM_dat <- L93_grid %>%
   select(px) %>%
