@@ -39,5 +39,5 @@ export SINGULARITY_TMPDIR="/lustre/$USER/singularity/tmp"
 export SINGULARITY_BIND="/sys:/sys, /proc:/proc, /tmp:/tmp, /var/tmp:/var/tmp, /etc/resolv.conf:/etc/resolv.conf, /etc/passwd:/etc/passwd"
 
 ##run R script
-singularity exec R-4.3.2-equipe-HAIR-nobinding.img Rscript simulate.R
+singularity exec R-4.3.2-equipe-HAIR-nobinding.img Rscript FrenchOtters/simulate.R
 
