@@ -110,8 +110,10 @@ data.list <- list(
   pxts_po = which(simDat$ypo>0),
   pxts_po_no = which(simDat$ypo==0&simDat$effort==1),
   nyear = length(unique(simDat$year)),
+  nregion = 1,
   px = simDat$px,
   t = simDat$year,
+  region = rep(1, nrow(simDat)),
   ypa = simDat$ypa,
   K = simDat$K,
   ypo = simDat$ypo,
@@ -127,7 +129,8 @@ data.list <- list(
   nspline = length(gamDat$jags.data$zero),
   x_gam = gamDat$jags.data$X,
   S1 = gamDat$jags.data$S1,
-  zero = gamDat$jags.data$zero
+  zero = gamDat$jags.data$zero,
+  ones = rep(1, nrow(simDat))
 )
 
 inits <- foreach(i = 1:4) %do% {
