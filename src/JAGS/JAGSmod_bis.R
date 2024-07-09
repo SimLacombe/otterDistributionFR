@@ -1,8 +1,8 @@
 model{
   ## LATENT MODEL ## 
   for(pxt in 1:npxt){
-    log(lambda[pxt]) <- inprod(x_latent[px[pxt],], beta_latent) + inprod(x_gam[px[pxt], ], b[, t[pxt]])
-    log(lambda_B[pxt]) <- log(lambda[pxt]) + cell_area[px[pxt]]
+    log(lambda[pxt]) <- inprod(x_latent[pxt,], beta_latent) + inprod(x_gam[px[pxt], ], b[, t[pxt]])
+    log(lambda_B[pxt]) <- log(lambda[pxt]) + cell_area[pxt]
     psi[pxt] <- 1 - exp(-lambda_B[pxt])
     z[pxt] ~ dbern(psi[pxt])
   }
@@ -31,9 +31,9 @@ model{
   
   ## LINEAR PREDICTORS
   for(pxt in 1:npxt){
-    thin_prob[pxt] <- ilogit(inprod(x_thin[px[pxt], ], beta_thin)) + beta_region[region[pxt], t[pxt]]
+    thin_prob[pxt] <- ilogit(inprod(x_thin[pxt, ], beta_thin)) + beta_region[region[pxt], t[pxt]]
     for(protocol in 1:nprotocols){
-      rho[pxt, protocol] <- ilogit(inprod(x_rho[px[pxt], ], beta_rho) + beta_rho_protocol[protocol])
+      rho[pxt, protocol] <- ilogit(inprod(x_rho[pxt, ], beta_rho) + beta_rho_protocol[protocol])
     }
   }
   

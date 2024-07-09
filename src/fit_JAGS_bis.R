@@ -8,6 +8,10 @@ colnames(effort) <- paste0("yr.", 2009:2023)
 
 otterDat <- filter(otterDat_full, code_insee %in% REGIONS)
 L93_grid <- filter(L93_grid_full, code_insee %in% REGIONS)
+CFdata <- filter(CFdata_full, gridCell %in% L93_grid$gridCell) %>%
+  mutate(year = paste0("yr.", year)) %>% 
+  st_drop_geometry %>%
+  select(-data.avail)
 
 ### Get offset and spatial covariates ------------------------------------------
 
@@ -27,6 +31,11 @@ ISDM_dat <- cbind(st_drop_geometry(L93_grid), effort) %>%
   arrange(year, px)
 
 rm(effort)
+
+### add CF data ----------------------------------------------------------------
+
+ISDM_dat <- ISDM_dat %>%
+  left_join(CFdata, by = c("year", "gridCell"))
 
 ### Presence-Absence data ------------------------------------------------------
 
@@ -61,7 +70,8 @@ ISDM_dat <- ISDM_dat %>%
   mutate(t = as.numeric(as.factor(year)),
          protocol.fact = as.numeric(as.factor(protocol)),
          region = as.numeric(as.factor(code_insee))) %>%
-  select(px, t, code_insee, region, is_po_sampled, K, ypa, protocol, protocol.fact, ypo, logArea)
+  select(px, t, code_insee, region, is_po_sampled, K, ypa, protocol,
+         protocol.fact, ypo, logArea, hydroLen, ripArea, Crayfish)
 
 ###  plot extent ---------------------------------------------------------------
 
@@ -118,13 +128,13 @@ data.list <- list(
   ypo = ISDM_dat$ypo,
   nprotocols = length(unique(ISDM_dat$protocol)),
   pa_protocol = ISDM_dat$protocol.fact,
-  ncov_lam = 2,
+  ncov_lam = 3,
   ncov_thin = 1,
   ncov_rho = 1,
   cell_area = ISDM_dat$logArea,
-  x_latent =  as.matrix(L93_grid[, c("hydroLen", "ripArea")]),
-  x_thin = matrix(0, nrow(L93_grid), 1),
-  x_rho =  matrix(0, nrow(L93_grid), 1),
+  x_latent =  as.matrix(ISDM_dat[, c("hydroLen", "ripArea", "Crayfish")]),
+  x_thin = matrix(0, nrow(ISDM_dat), 1),
+  x_rho =  matrix(0, nrow(ISDM_dat), 1),
   nspline = length(gamDat$jags.data$zero),
   x_gam = gamDat$jags.data$X,
   S1 = gamDat$jags.data$S1,
@@ -137,14 +147,6 @@ inits <- foreach(i = 1:4) %do% {
 }
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN MODEL ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-### Params ---------------------------------------------------------------------
-
-jagsPar <- list(N.CHAINS = 4,
-               ADAPT = 500,
-               BURNIN = 2000,
-               SAMPLE = 1000,
-               THIN = 1)
-
 ### Call jags ------------------------------------------------------------------
 
 mod <- jags.model(
