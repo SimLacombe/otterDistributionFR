@@ -4,7 +4,7 @@ library(LaplacesDemon)
 
 rm(list = ls())
 
-path <-"out/Mod_SE_20240708_030718.RData"
+path <-"out/Mod_SE_20240709_024815.RData"
   
 load(path)
 
@@ -47,7 +47,7 @@ ll <- map(seq_along(unique(ISDM_dat$t)), function(.t){
            byrow = TRUE)
 })
 
-rm(bbb, bbl)
+rm(bbb)
 
 ll <- reduce(ll, cbind)
 
@@ -61,6 +61,13 @@ ISDM_dat <- ISDM_dat %>%
   group_by(px) %>%
   arrange(t) %>%
   mutate(dpsi = estPsi - lag(estPsi, 1))
+
+latent_covs <- data.frame(alpha = exp(c(bbl[,1], bbl[,2])),
+                          cov = rep(c("hydroLen", "ripArea"),each = 4000))
+
+ggplot(latent_covs)+
+  geom_violin(aes(x = cov, fill = cov, y = alpha))+
+  theme_bw()
 
 ### Beta_thin ------------------------------------------------------------------
 
