@@ -248,7 +248,7 @@ jagsPar <- list(N.CHAINS = 4,
 # 
 # save.image(file=outpath)
 
-load("out/Simulated20240627_180917.RData")
+load("out/Simulated20240709_032406.RData")
 ```
 
 ## 5. Plot output
@@ -287,7 +287,7 @@ simDat <- simDat %>%
 
 ggplot() +
   geom_sf(data = grid, fill = "lightgrey", col = NA) +
-  geom_sf(data = simDat, aes(fill = estLam), col = NA) +
+  geom_sf(data = simDat, aes(fill = estPsi), col = NA) +
   scale_fill_gradient2(
     low = "white",
     mid = "orange",

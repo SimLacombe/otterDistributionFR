@@ -4,7 +4,7 @@ library(LaplacesDemon)
 
 rm(list = ls())
 
-path <-"out/Mod_SE_20240709_024815.RData"
+path <-"out/Mod_E_20240709_071954.RData"
   
 load(path)
 
