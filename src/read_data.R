@@ -110,7 +110,7 @@ effortMat <- map(2009:2023, function(x){
   st_join(grid, actionAreas %>% filter(year == x)) %>% 
   st_drop_geometry() %>%
   group_by(gridCell) %>%
-  summarize(dataSource = dataSource) %>%
+  summarize(dataSource = dataSource[1]) %>%
   .$dataSource
 }) 
 
