@@ -2,7 +2,6 @@ library(tidyverse)
 library(lubridate)
 library(foreach)
 library(sf)
-library(raster)
 library(concom)
 
 rm(list = ls())
@@ -10,7 +9,7 @@ rm(list = ls())
 source("src/functions/getReplicates.R")
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CREATE GRID ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-
+# 
 # map_FR <- read_sf("data/regions-20140306-5m-shp/") %>%
 #   filter(code_insee %in% c("42", "72", "83", "25", "26", "53",
 #                             "24", "21", "43", "23", "11", "91",
@@ -94,21 +93,30 @@ otterDat <- otterDat %>%
 datPO <-  otterDat %>%
   filter(protocol == "PO")
 
-buffer <- datPO  %>%
+actionAreas <- datPO  %>%
   group_by(dataSource) %>% 
-  summarize(buff = getSamplingArea(lon, lat, lvl = 0.001))
+  summarize(aa = getSamplingArea(lon, lat, lvl = 0.001))
 
-bufferPeryear <- datPO %>% 
+actionAreas <- datPO %>% 
   group_by(year, dataSource) %>%
   summarize() %>% 
-  left_join(buffer, by = "dataSource") %>%
-  st_as_sf(crs = 2154) %>%
-  group_by(year) %>% 
-  summarize(buff = st_union(buff))
+  left_join(actionAreas, by = "dataSource") %>%
+  st_as_sf(crs = 2154) 
 
-effortMat <- sapply(2009:2023, function(x){
-  as.numeric(st_intersects(grid, bufferPeryear$buff[bufferPeryear$year == x], sparse = FALSE))
-})
+actionAreas <- actionAreas%>%
+  arrange(year, st_area(actionAreas))
+
+effortMat <- map(2009:2023, function(x){
+  st_join(grid, actionAreas %>% filter(year == x)) %>% 
+  st_drop_geometry() %>%
+  group_by(gridCell) %>%
+  summarize(dataSource = dataSource) %>%
+  .$dataSource
+}) 
+
+effortMat <- effortMat%>%
+  reduce(rbind) %>%
+  t
 
 ### Remove opportunistic negative data -----------------------------------------
 
