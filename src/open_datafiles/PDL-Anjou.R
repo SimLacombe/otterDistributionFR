@@ -44,3 +44,6 @@ dat <- dat %>%
              yCol = `Y Lambert93 [m]`,
              gridCellCol = Maille,
              dateformat = "%Y-%m-%d") 
+
+surveys$transect <- append(surveys$transect, c("KAYAK", "SBO"))
+surveys$pointwise <- append(surveys$pointwise, c())

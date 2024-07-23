@@ -20,3 +20,5 @@ dat <- dat %>%
              yCol = as.numeric(`y Lambert93`),
              dateformat = "%d/%m/%Y")
 
+surveys$transect <- append(surveys$transect, c())
+surveys$pointwise <- append(surveys$pointwise, c())

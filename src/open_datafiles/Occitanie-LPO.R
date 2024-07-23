@@ -34,3 +34,6 @@ dat2 <- dat2 %>%
              dateformat = "%d/%m/%Y") 
 
 dat <- rbind(dat, dat2)
+
+surveys$transect <- append(surveys$transect, c())
+surveys$pointwise <- append(surveys$pointwise, c())

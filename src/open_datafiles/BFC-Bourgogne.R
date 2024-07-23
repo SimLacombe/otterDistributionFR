@@ -72,3 +72,6 @@ dat2 <- dat2 %>%
   )
 
 dat <- rbind(dat1, dat2)
+
+surveys$transect <- append(surveys$transect, c())
+surveys$pointwise <- append(surveys$pointwise, c("OFABPP"))

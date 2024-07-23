@@ -22,6 +22,9 @@ dat <- dat%>%
              gridCellCol = Maille, 
              dateformat = "%d/%m/%Y") 
 
+surveys$transect <- append(surveys$transect, c())
+surveys$pointwise <- append(surveys$pointwise, c())
+
 # og.time <- min(paste(dat2$`Année,N,24,15`, dat2$`Mois,N,24,15`, "24", sep = "-"))
 # dat2 <- dat2%>%
 #   mutate(date = as.Date(dat2$`Date,D`-min(`Date,D`), origin = og.time),

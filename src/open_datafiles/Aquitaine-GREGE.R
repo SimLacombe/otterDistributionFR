@@ -76,3 +76,6 @@ dat3 <- dat3 %>%
              dateformat = "%Y-%m-%d") 
 
 dat <- rbind(dat1, dat2, dat3)
+
+surveys$transect <- append(surveys$transect, c())
+surveys$pointwise <- append(surveys$pointwise, c("GREGEPP"))

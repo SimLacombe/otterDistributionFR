@@ -40,4 +40,7 @@ dat <- dat %>%
              xCol = COORD_LON_L93,
              yCol = COORD_LAT_L93,
              gridCellCol = GRID_NAME,
-             dateformat = "%Y-%m-%d") 
+             dateformat = "%Y-%m-%d")
+
+surveys$transect <- append(surveys$transect, c())
+surveys$pointwise <- append(surveys$pointwise, c("VENRN"))

@@ -32,3 +32,6 @@ dat <- dat %>%
              yCol = `y Lambert93`,
              gridCellCol = `Maille 10 Lambert93`,
              dateformat = "%d/%m/%Y") 
+
+surveys$transect <- append(surveys$transect, c())
+surveys$pointwise <- append(surveys$pointwise, c())

@@ -36,3 +36,5 @@ dat <- dat %>%
              yCol = Latitude.Lambert.93,
              dateformat = "%Y-%m-%d") 
 
+surveys$transect <- append(surveys$transect, c())
+surveys$pointwise <- append(surveys$pointwise, c("GMNPP"))

@@ -28,6 +28,7 @@ L93_grid$px <- 1:nrow(L93_grid)
 ISDM_dat <- cbind(st_drop_geometry(L93_grid), effort) %>%
   pivot_longer(cols = all_of(paste0("yr.", 2009:2023)),
                names_to = "year", values_to = "is_po_sampled") %>%
+  mutate(is_po_sampled = as.numeric(!is.na(is_po_sampled))) %>% 
   arrange(year, px)
 
 rm(effort)

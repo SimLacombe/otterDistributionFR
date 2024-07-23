@@ -48,6 +48,9 @@ grid2 <- readRDS("data/L9310x10grid.rds") %>%
 map_FR <- readRDS("data/map_fr.rds") %>%
   st_as_sf(crs = 2154)
 
+surveys <- list(transect = "IUCN",
+                pointwise = character(0))
+
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Load data ------------------------------------------------------------------
 
@@ -66,6 +69,12 @@ rm(list = setdiff(ls(), envt))
 
 otterDat <-  filter(otterDat,!is.na(date),
                     year %in% 2009:2023)
+
+### Changre the protocol colomn to PO transect or punctual ---------------------
+
+otterDat <- otterDat %>%
+  mutate(protocol = ifelse(protocol %in% surveys$transect, "transect",
+                           ifelse(protocol %in% surveys$pointwise, "pointwise", "PO")))
 
 ### Get approx lat/lon for obs with missing coordinatess -----------------------
 

@@ -33,3 +33,6 @@ dat <- dat %>%
              xCol = lon,
              yCol = lat,
              dateformat = "%d/%m/%Y") 
+
+surveys$transect <- append(surveys$transect, c())
+surveys$pointwise <- append(surveys$pointwise, c())

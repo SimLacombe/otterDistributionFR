@@ -4,7 +4,7 @@ library(LaplacesDemon)
 
 rm(list = ls())
 
-path <-"out/Mod_E_20240709_071954.RData"
+path <-"out/Mod_full_20240710_100810.RData"
   
 load(path)
 
@@ -40,7 +40,7 @@ ll <- map(seq_along(unique(ISDM_dat$t)), function(.t){
     filter(t == .t) 
   
   bbb[,(1:20) + (.t-1)*20] %*% t(gamDat$jags.data$X[ISDM_dat_t$px,]) +
-    bbl %*% t(ISDM_dat_t[, c("hydroLen", "ripArea")]) +
+    bbl %*% t(ISDM_dat_t[, c("hydroLen", "ripArea", "Crayfish")]) +
     matrix(rep(ISDM_dat_t$logArea, nrow(out)),
            nrow = nrow(out),
            ncol = nrow(ISDM_dat_t),
@@ -62,8 +62,8 @@ ISDM_dat <- ISDM_dat %>%
   arrange(t) %>%
   mutate(dpsi = estPsi - lag(estPsi, 1))
 
-latent_covs <- data.frame(alpha = exp(c(bbl[,1], bbl[,2])),
-                          cov = rep(c("hydroLen", "ripArea"),each = 4000))
+latent_covs <- data.frame(alpha = exp(c(bbl[,1], bbl[,2], bbl[,3])),
+                          cov = rep(c("hydroLen", "ripArea", "Crayfish"),each = 4000))
 
 ggplot(latent_covs)+
   geom_violin(aes(x = cov, fill = cov, y = alpha))+
@@ -95,14 +95,26 @@ ggplot(params)+
 
 ggplot() +
   geom_sf(data = L93_grid, fill = "lightgrey", col = NA) +
-  geom_sf(data = ISDM_dat, aes(fill = estPsi), col = NA) +
-  scale_fill_gradient2(
+  geom_sf(data = ISDM_dat %>% filter((t + 2008) %in% c(2011, 2015, 2019, 2023)), aes(fill = estPsi), col = NA) +
+  scale_fill_gradient2(name = "psi",
     low = "white",
     mid = "orange",
     high = "darkred",
     midpoint = .5
   ) +
-  facet_wrap( ~ t) +
+  facet_wrap( ~ (t+2008)) +
+  theme_bw()
+
+ggplot() +
+  geom_sf(data = L93_grid, fill = "lightgrey", col = NA) +
+  geom_sf(data = ISDM_dat, aes(fill = log(sdLam)), col = NA) +
+  # scale_fill_gradient2(name = "psi",
+  #                      low = "white",
+  #                      mid = "orange",
+  #                      high = "darkred",
+  #                      midpoint = .5
+  # ) +
+  facet_wrap( ~ (t+2008)) +
   theme_bw()
 
 ggplot() +

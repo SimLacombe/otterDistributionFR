@@ -29,11 +29,13 @@ L93_grid <- readRDS(grid.filename) %>%
 
 effort <- readRDS(effort.filename)
 
+map_FR <- readRDS("data/map_fr.rds") %>%
+  st_as_sf(crs = 2154)
+
 ### Plot full dataset ----------------------------------------------------------
 
 otterDat <- otterDat %>%
-  mutate(period = year) %>%
-  filter(code_insee %in% REGIONS)
+  mutate(period = year)
 
 otterDat %>%
   filter(protocol != "PO") %>% 
@@ -44,12 +46,13 @@ otterDat %>%
   left_join(L93_grid[, c("geometry", "gridCell")], by = "gridCell") %>%
   st_as_sf %>%
   ggplot() +
+  geom_sf(data = map_FR) +
   geom_sf(aes(fill = presence), col = NA) +
   geom_sf(data = otterDat %>% 
             filter(protocol == "PO") %>% 
-            st_as_sf(coords = c("lon", "lat"),crs = 2154), aes(color = protocol), size = .25) +
+            st_as_sf(coords = c("lon", "lat"),crs = 2154), aes(color = protocol), size = .125) +
   scale_fill_manual(name = "Standardized data",
-                    values = c("orange", "lightblue"),
+                    values = c("orange", "chartreuse4"),
                     labels = c("Unobserved", "present")) +
   scale_color_manual("Opportunistic data", values = "black", label = "present") +
   theme_bw() +
