@@ -16,22 +16,16 @@ model{
   }
   
   # 2. Presence only
-  # ypo number of po observations 
-  # when ypo > 0 I use the Poisson variable 
-  # pxts_po : indices of pixels with at least one po obs
   for(pxt in pxts_po){ 
     ones[pxt] ~ dbern(exp(-lambda_B[pxt] * thin_prob[pxt]) * (lambda[pxt] * thin_prob[pxt]) ** ypo[pxt])
   }
-  # When ypo = 0, I explicitly give the poisson likelihood, it saves a lot of time
-  # pxts_po : indices of pixels with no po obs but with sampling for po
-  # ones : vector of 1s
   for(pxt in pxts_po_no){ 
     ones[pxt] ~ dbern(exp(-lambda_B[pxt] * thin_prob[pxt]))
   }
   
   ## LINEAR PREDICTORS
   for(pxt in 1:npxt){
-    thin_prob[pxt] <- ilogit(inprod(x_thin[pxt, ], beta_thin)) + beta_region[region[pxt], t[pxt]]
+    thin_prob[pxt] <- ilogit(inprod(x_thin[pxt, ], beta_thin)) + beta_ent[ent[px[pxt], t[pxt]], t[pxt]]
     for(protocol in 1:nprotocols){
       rho[pxt, protocol] <- ilogit(inprod(x_rho[pxt, ], beta_rho) + beta_rho_protocol[protocol])
     }
@@ -55,9 +49,9 @@ model{
     beta_rho_protocol[protocol] ~ dnorm(0, 1/(sigma_protocol*sigma_protocol))
   }
   
-  for(reg in 1:nregion){
+  for(ent in 1:nent){
     for(yr in 1:nyear){
-      beta_region[reg, yr] ~ dnorm(0, 1/(sigma_region*sigma_region))
+      beta_ent[ent, yr] ~ dnorm(0, 1/(sigma_ent*sigma_ent))
     }
   }
   
@@ -73,7 +67,7 @@ model{
   }
 
   sigma_protocol ~ dunif(0,100)
-  sigma_region ~ dunif(0,100)
+  sigma_ent ~ dunif(0,100)
   
   lambda_gam ~ dgamma(.05,.005)
   tau_gam ~ dgamma(1,1)

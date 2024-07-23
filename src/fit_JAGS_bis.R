@@ -31,12 +31,17 @@ ISDM_dat <- cbind(st_drop_geometry(L93_grid), effort) %>%
   mutate(is_po_sampled = as.numeric(!is.na(is_po_sampled))) %>% 
   arrange(year, px)
 
-rm(effort)
+entities <- matrix(as.numeric(as.factor(effort)), nrow = nrow(effort), ncol = ncol(effort))
+
+## give a value to cells that were not sampled (won't be used for calculation of likelihood),
+## but is necessary for computation
+entities[which(is.na(entities), arr.ind = T)] <- max(entities, na.rm = T) + 1
 
 ### add CF data ----------------------------------------------------------------
 
 ISDM_dat <- ISDM_dat %>%
-  left_join(CFdata, by = c("year", "gridCell"))
+  left_join(CFdata, by = c("year", "gridCell")) %>% 
+  mutate(Crayfish = as.numeric(Crayfish >= 0.75))
 
 ### Presence-Absence data ------------------------------------------------------
 
@@ -120,10 +125,10 @@ data.list <- list(
   pxts_po = which(ISDM_dat$ypo>0),
   pxts_po_no = which(ISDM_dat$ypo==0&ISDM_dat$is_po_sampled==1),
   nyear = length(unique(ISDM_dat$t)),
-  nregion = length(unique(ISDM_dat$code_insee)),
+  nent = max(entities),
   px = ISDM_dat$px,
   t = ISDM_dat$t,
-  region = ISDM_dat$region,
+  ent = entities,
   ypa = ISDM_dat$ypa,
   K = ISDM_dat$K,
   ypo = ISDM_dat$ypo,
@@ -161,16 +166,7 @@ update(mod, jagsPar$BURNIN)
 
 mcmc <- coda.samples(
   mod,
-  variable.names = c(
-    "z",
-    "b",
-    "beta_region",
-    "beta_latent",
-    "beta_rho",
-    "beta_rho_protocol",
-    "beta_thin",
-    "lambda_gam"
-  ),
+  variable.names = jagsPar$MONITOR,
   n.iter = jagsPar$SAMPLE,
   thin = jagsPar$THIN
 )
