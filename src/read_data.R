@@ -119,8 +119,13 @@ effortMat <- map(2009:2023, function(x){
   st_join(grid, actionAreas %>% filter(year == x)) %>% 
   st_drop_geometry() %>%
   group_by(gridCell) %>%
-  summarize(dataSource = dataSource[1]) %>%
+  mutate(dataSource = dataSource[1]) %>%  
+  select(gridCell, dataSource) %>%
+  unique %>%
   .$dataSource
+  
+## Note: the mutate/select/unique sequence is equivalent to summarize but
+## does not reorder cols based on the grouping column
 }) 
 
 effortMat <- effortMat%>%
