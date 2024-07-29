@@ -1,103 +1,89 @@
-library(tidyverse)
-library(sf)
-library(foreach)
-library(mgcv)
-
-library(rjags)
-library(coda)
-
-rm(list = ls())
-
-source("src/functions/jags_ini.R")
-
-# Crop Paris + NE
-# REGIONS <- c("72", "83", "25", "26", "53",
-#              "24", "43", "23", "91",
-#              "74", "73", "52",
-#              "54", "93", "82")
-
-# Br + PdL + Centre + Basse Normandie
-REGIONS <- c("52", "53"," 24", "25")
-
-TIMEPERIOD <- 1 #years
-
-TIMELAG <- TIMEPERIOD - 2009 %% TIMEPERIOD
-
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA AND COVS ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-### Load data ------------------------------------------------------------------
-
-data.filename <- "data/otterDat.rds"
-grid.filename <- "data/L9310x10grid.rds"
-effort.filename <- "data/samplingEffort.rds"
-
-otterDat <- readRDS(data.filename)
-
-L93_grid <- readRDS(grid.filename) %>%
-  st_as_sf(crs = 2154)
-
-effort <- readRDS(effort.filename)
-
 ### Adapt effort matrix to sp and tmp resolution -------------------------------
 
-periods <- (2009:2023 + TIMELAG) %/% TIMEPERIOD
-
-effort <- effort[L93_grid$code_insee %in% REGIONS, ]
-
-if(TIMEPERIOD > 1) {
-  effort <- sapply(unique(periods), function(p) {
-    sign(apply(effort[, periods == p], 1, sum))
-  })
-}
-
+effort <- effort_full[L93_grid_full$code_insee %in% REGIONS, ]
+colnames(effort) <- paste0("yr.", 2009:2023)
 
 ### Filter the region of interest ----------------------------------------------
 
-otterDat <- filter(otterDat, code_insee %in% REGIONS)
-L93_grid <- filter(L93_grid, code_insee %in% REGIONS)
+otterDat <- filter(otterDat_full, code_insee %in% REGIONS)
+L93_grid <- filter(L93_grid_full, code_insee %in% REGIONS)
+CFdata <- filter(CFdata_full, gridCell %in% L93_grid$gridCell) %>%
+  mutate(year = paste0("yr.", year)) %>% 
+  st_drop_geometry %>%
+  select(-data.avail)
 
 ### Get offset and spatial covariates ------------------------------------------
 
-L93_grid$intercept <- 1
 L93_grid$logArea <- log(as.numeric(st_area(L93_grid)) / 1000 ** 2)
+L93_grid$hydroLen <- c(scale(L93_grid$hydroLen))
+L93_grid$ripArea <- c(scale(L93_grid$ripArea))
 
-### Get primary period ---------------------------------------------------------
+### Get pixel identifiers ------------------------------------------------------
 
-otterDat$period <- (otterDat$year + TIMELAG) %/% TIMEPERIOD
-# otterDat$period <- 1
+L93_grid$px <- 1:nrow(L93_grid)
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~ FORMAT DATA FOR JAGS ~~~~~~~~~~~~~~~~~~~~~~~~ ###
+
+ISDM_dat <- cbind(st_drop_geometry(L93_grid), effort) %>%
+  pivot_longer(cols = all_of(paste0("yr.", 2009:2023)),
+               names_to = "year", values_to = "is_po_sampled") %>%
+  mutate(is_po_sampled = as.numeric(!is.na(is_po_sampled))) %>% 
+  arrange(year, px)
+
+entities <- matrix(as.numeric(as.factor(effort)), nrow = nrow(effort), ncol = ncol(effort))
+
+## give a value to cells that were not sampled (won't be used for calculation of likelihood),
+## but is necessary for computation
+entities[which(is.na(entities), arr.ind = T)] <- max(entities, na.rm = T) + 1
+
+### add CF data ----------------------------------------------------------------
+
+ISDM_dat <- ISDM_dat %>%
+  left_join(CFdata, by = c("year", "gridCell")) %>% 
+  mutate(Crayfish = as.numeric(Crayfish >= 0.75))
+
 ### Presence-Absence data ------------------------------------------------------
 
-paDat <- otterDat %>%
+ISDM_dat <- otterDat %>%
   filter(protocol != "PO", gridCell %in% L93_grid$gridCell) %>%
-  group_by(period, gridCell, protocol) %>%
+  group_by(year, gridCell, protocol) %>%
   summarize(
     K = n(),
-    y = sum(presence)
+    ypa = sum(presence)
   ) %>%
-  ungroup %>%
-  mutate(protocol.fact = as.numeric(as.factor(protocol)),
-         pixel = pmatch(gridCell, L93_grid$gridCell, duplicates.ok = TRUE)) %>%
-  arrange(period)
-
-npa <- unname(c(table(paDat$period)))
-
-paIdxs <- c(0, cumsum(npa))
+  mutate(year = paste0("yr.", year)) %>%
+  left_join(ISDM_dat, .)
 
 ### Presence-Only data ---------------------------------------------------------
 
-poDat <- otterDat %>%
+ISDM_dat <- otterDat %>%
   filter(protocol  == "PO",
          gridCell %in% L93_grid$gridCell) %>%
-  select(period, gridCell) %>%
-  mutate(pixel = pmatch(gridCell, L93_grid$gridCell, duplicates.ok = TRUE)) %>% 
-  arrange(period)
+  group_by(year, gridCell) %>%
+  summarize(ypo = n()) %>%
+  mutate(year = paste0("yr.", year)) %>%
+  left_join(ISDM_dat, .)
 
-poDat$ones <- 1
+### remove all NAs -------------------------------------------------------------
 
-npo <- unname(c(table(poDat$period)))
+ISDM_dat <- modify(ISDM_dat, ~ ifelse(is.na(.x), 0, .x))
 
-poIdxs <- c(0, cumsum(npo))
+### arrange --------------------------------------------------------------------
+
+ISDM_dat <- ISDM_dat %>%
+  filter(is_po_sampled|sign(K)) %>% 
+  mutate(t = as.numeric(as.factor(year)),
+         protocol.fact = as.numeric(as.factor(protocol)),
+         region = as.numeric(as.factor(code_insee))) %>%
+  select(px, t, code_insee, region, is_po_sampled, K, ypa, protocol,
+         protocol.fact, ypo, logArea, hydroLen, ripArea, Crayfish)
+
+###  plot extent ---------------------------------------------------------------
+
+# ggplot(ISDM_dat) + 
+#   geom_sf(aes(fill = is_po_sampled)) + 
+#   facet_wrap(~year)
 
 ### GAM Data -------------------------------------------------------------------
 
@@ -126,41 +112,40 @@ gamDat <- jagam(
   family = "binomial"
 )
 
+rm(tmpDat)
+
 gamDat$jags.ini$b[1] <- -4.6 #log area of cells
 
 ### Format data list -----------------------------------------------------------
-
-npixel <- nrow(L93_grid)
-nperiod <- length(unique(paDat$period))
+L93_grid <- st_drop_geometry(L93_grid)
 
 data.list <- list(
-  cell_area = L93_grid$logArea,
-  npixel = npixel,
-  nyear = nperiod,
-  nregion = length(unique(L93_grid$code_insee)),
-  nprotocols = length(unique(paDat$protocol.fact)),
-  nspline = length(gamDat$jags.data$zero),
-  npo = npo,
-  po.idxs = poIdxs,
-  pa.idxs = paIdxs,
-  ncov_lam = 1,
+  npxt = nrow(ISDM_dat),
+  pxts_pa = which(ISDM_dat$K>0),
+  pxts_po = which(ISDM_dat$ypo>0),
+  pxts_po_no = which(ISDM_dat$ypo==0&ISDM_dat$is_po_sampled==1),
+  nyear = length(unique(ISDM_dat$t)),
+  nent = max(entities),
+  px = ISDM_dat$px,
+  t = ISDM_dat$t,
+  ent = entities,
+  ypa = ISDM_dat$ypa,
+  K = ISDM_dat$K,
+  ypo = ISDM_dat$ypo,
+  nprotocols = length(unique(ISDM_dat$protocol)) - 1,
+  pa_protocol = ISDM_dat$protocol.fact - 1,
+  ncov_lam = 3,
   ncov_thin = 1,
   ncov_rho = 1,
-  x_latent =  matrix(0, npixel, 1),
-  x_thin = matrix(L93_grid$intercept, npixel, 1),
-  x_rho =  matrix(L93_grid$intercept, npixel, 1),
+  cell_area = ISDM_dat$logArea,
+  x_latent =  as.matrix(ISDM_dat[, c("hydroLen", "ripArea", "Crayfish")]),
+  x_thin = matrix(0, nrow(ISDM_dat), 1),
+  x_rho =  matrix(0, nrow(ISDM_dat), 1),
+  nspline = length(gamDat$jags.data$zero),
   x_gam = gamDat$jags.data$X,
   S1 = gamDat$jags.data$S1,
-  region = as.numeric(as.factor(L93_grid$code_insee)),
-  effort = effort,
-  pa_protocole = paDat$protocol.fact,
-  po_pixel = poDat$pixel,
-  pa_pixel = paDat$pixel,
-  y = paDat$y,
-  K = paDat$K,
-  ones = poDat$ones,
   zero = gamDat$jags.data$zero,
-  cste = 1000
+  ones = rep(1, nrow(ISDM_dat))
 )
 
 inits <- foreach(i = 1:4) %do% {
@@ -168,49 +153,24 @@ inits <- foreach(i = 1:4) %do% {
 }
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN MODEL ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-### Params ---------------------------------------------------------------------
-
-N.CHAINS = 4
-
-ADAPT = 10 
-BURNIN = 1000
-SAMPLE = 1000
-THIN = 1
-
 ### Call jags ------------------------------------------------------------------
 
-## Integrated Species Distribution Model (PA + PO) ##
-
-system.time(mod <- jags.model(
-  file = "src/JAGS/IntSDMgam_JAGSmod.R",
+mod <- jags.model(
+  file = "src/JAGS/JAGSmod_bis.R",
   data = data.list,
   inits = inits,
-  n.chains = N.CHAINS,
-  n.adapt = ADAPT))
+  n.chains = jagsPar$N.CHAINS,
+  n.adapt = jagsPar$ADAPT)
 
-update(mod, BURNIN)
+update(mod, jagsPar$BURNIN)
 
 mcmc <- coda.samples(
   mod,
-  variable.names = c(
-    "z",
-    "b",
-    "beta_region",
-    "beta_latent",
-    "beta_rho",
-    "beta_rho_protocol",
-    "beta_thin",
-    "lambda_gam"
-  ),
-  n.iter = SAMPLE,
-  thin = THIN
+  variable.names = jagsPar$MONITOR,
+  n.iter = jagsPar$SAMPLE,
+  thin = jagsPar$THIN
 )
 
-out <- as.matrix(as.mcmc.list(mcmc), chains = T)
+rm(mod, jagsPar, inits)
 
-outpath <-
-  paste0("out/",
-         paste(Sys.Date(), paste(REGIONS, collapse = "."), TIMEPERIOD,
-               sep = "_"),
-         "yrs.rds")
-saveRDS(out, outpath)
+out <- as.matrix(as.mcmc.list(mcmc), chains = T)

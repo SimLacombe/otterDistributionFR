@@ -1,10 +1,10 @@
 my_inits <- function(chain){
   gen_list <- function(chain = chain){
     list(
-      z = matrix(1, ncol = data.list$nyear, nrow = data.list$npixel),
-      beta_latent = rnorm(1, 0, 0.25),
-      beta_rho = rnorm(1, 0, 0.25),
-      beta_thin = rnorm(1, 0, 0.25),
+      z = rep(1, data.list$npxt),
+      beta_latent = rnorm(data.list$ncov_lam, 0, 0.25),
+      beta_rho = rnorm(data.list$ncov_rho, 0, 0.25),
+      beta_thin = rnorm(data.list$ncov_thin, 0, 0.25),
       b = matrix(
         rnorm(data.list$nspline * data.list$nyear, rep(gamDat$jags.ini$b,each = data.list$nyear),0),
         nrow = data.list$nspline,

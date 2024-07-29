@@ -28,7 +28,8 @@ L93_grid <- readRDS(grid.path)%>%
 rivers.path <- "data/rivers.rds"
 
 rivers <- readRDS(rivers.path)%>%
-  filter(ORD_CLAS <= 3) %>%
+  # filter(ORD_CLAS <= 3) %>%
+  filter(ORD_STRA > 2) %>%
   st_as_sf(crs = 2154)
 
 ### Extract hydrological information -------------------------------------------

@@ -8,7 +8,7 @@ library(coda)
 
 rm(list = ls())
 
-source("src/functions/jags_ini_bis.R")
+source("src/functions/jags_ini.R")
 
 jagsPar <- list(N.CHAINS = 4,
                 ADAPT = 500,
@@ -52,7 +52,7 @@ REGIONS <- c("72", "83", "25", "26", "53",
              "74", "73", "52",
              "54", "93", "82")
 
-source("src/fit_JAGS_bis.R")
+source("src/fit_JAGS.R")
 
 outpath <- paste0("out/","Mod_full_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
 
@@ -64,7 +64,7 @@ rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "CFda
 
 REGIONS <- c("52", "53"," 24", "25")
 
-source("src/fit_JAGS_bis.R")
+source("src/fit_JAGS.R")
 
 outpath <- paste0("out/","Mod_NO_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
 
@@ -76,7 +76,7 @@ rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "CFda
 
 REGIONS <- c("83", "91","73", "93", "82")
 
-source("src/fit_JAGS_bis.R")
+source("src/fit_JAGS.R")
 
 outpath <- paste0("out/","Mod_SE_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
 
@@ -88,7 +88,7 @@ rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "CFda
 
 REGIONS <- c("74", "83", "26", "24", "43", "82")
 
-source("src/fit_JAGS_bis.R")
+source("src/fit_JAGS.R")
 
 outpath <- paste0("out/","Mod_E_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
 
