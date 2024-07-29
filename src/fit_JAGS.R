@@ -27,15 +27,10 @@ L93_grid$px <- 1:nrow(L93_grid)
 
 ISDM_dat <- cbind(st_drop_geometry(L93_grid), effort) %>%
   pivot_longer(cols = all_of(paste0("yr.", 2009:2023)),
-               names_to = "year", values_to = "is_po_sampled") %>%
-  mutate(is_po_sampled = as.numeric(!is.na(is_po_sampled))) %>% 
+               names_to = "year", values_to = "ent") %>%
+  mutate(is_po_sampled = as.numeric(!is.na(ent)),
+         ent.f = as.numeric(as.factor(ent))) %>% 
   arrange(year, px)
-
-entities <- matrix(as.numeric(as.factor(effort)), nrow = nrow(effort), ncol = ncol(effort))
-
-## give a value to cells that were not sampled (won't be used for calculation of likelihood),
-## but is necessary for computation
-entities[which(is.na(entities), arr.ind = T)] <- max(entities, na.rm = T) + 1
 
 ### add CF data ----------------------------------------------------------------
 
@@ -76,14 +71,9 @@ ISDM_dat <- ISDM_dat %>%
   mutate(t = as.numeric(as.factor(year)),
          protocol.fact = as.numeric(as.factor(protocol)),
          region = as.numeric(as.factor(code_insee))) %>%
-  select(px, t, code_insee, region, is_po_sampled, K, ypa, protocol,
+  mutate(t2 = t*t) %>%
+  select(px, t, t2, code_insee, ent, ent.f, is_po_sampled, K, ypa, protocol,
          protocol.fact, ypo, logArea, hydroLen, ripArea, Crayfish)
-
-###  plot extent ---------------------------------------------------------------
-
-# ggplot(ISDM_dat) + 
-#   geom_sf(aes(fill = is_po_sampled)) + 
-#   facet_wrap(~year)
 
 ### GAM Data -------------------------------------------------------------------
 
@@ -125,22 +115,19 @@ data.list <- list(
   pxts_po = which(ISDM_dat$ypo>0),
   pxts_po_no = which(ISDM_dat$ypo==0&ISDM_dat$is_po_sampled==1),
   nyear = length(unique(ISDM_dat$t)),
-  nent = max(entities),
+  nent = max(ISDM_dat$ent.f),
   px = ISDM_dat$px,
   t = ISDM_dat$t,
-  ent = entities,
+  t2 = ISDM_dat$t2,
+  ent = ISDM_dat$ent.f,
   ypa = ISDM_dat$ypa,
   K = ISDM_dat$K,
   ypo = ISDM_dat$ypo,
   nprotocols = length(unique(ISDM_dat$protocol)) - 1,
   pa_protocol = ISDM_dat$protocol.fact - 1,
   ncov_lam = 3,
-  ncov_thin = 1,
-  ncov_rho = 1,
   cell_area = ISDM_dat$logArea,
   x_latent =  as.matrix(ISDM_dat[, c("hydroLen", "ripArea", "Crayfish")]),
-  x_thin = matrix(0, nrow(ISDM_dat), 1),
-  x_rho =  matrix(0, nrow(ISDM_dat), 1),
   nspline = length(gamDat$jags.data$zero),
   x_gam = gamDat$jags.data$X,
   S1 = gamDat$jags.data$S1,
@@ -156,7 +143,7 @@ inits <- foreach(i = 1:4) %do% {
 ### Call jags ------------------------------------------------------------------
 
 mod <- jags.model(
-  file = "src/JAGS/JAGSmod_bis.R",
+  file = "src/JAGS/JAGSmod.R",
   data = data.list,
   inits = inits,
   n.chains = jagsPar$N.CHAINS,

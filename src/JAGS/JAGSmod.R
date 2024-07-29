@@ -12,25 +12,20 @@ model{
   # K number of visits, ypa number of positive visits
   # pxts_pa : indices of pixels with at least one pa visit
   for(pxt in pxts_pa){ 
-    ypa[pxt] ~ dbin(z[pxt] * rho[pxt, pa_protocol[pxt]], K[pxt])
+    rho[pxt] <- ilogit(beta0_rho + u_protocol[pa_protocol[pxt]])
+    ypa[pxt] ~ dbin(z[pxt] * rho[pxt], K[pxt])
   }
   
   # 2. Presence only
   for(pxt in pxts_po){ 
+    thin_prob[pxt] <- ilogit(beta0_thin + u0_ent[ent[pxt]] + u1_ent[ent[pxt]] * t[pxt] + u2_ent[ent[pxt]] * t2[pxt])
     ones[pxt] ~ dbern(exp(-lambda_B[pxt] * thin_prob[pxt]) * (lambda[pxt] * thin_prob[pxt]) ** ypo[pxt])
   }
   for(pxt in pxts_po_no){ 
+    thin_prob[pxt] <- ilogit(beta0_thin + u0_ent[ent[pxt]] + u1_ent[ent[pxt]] * t[pxt] + u2_ent[ent[pxt]] * t2[pxt])
     ones[pxt] ~ dbern(exp(-lambda_B[pxt] * thin_prob[pxt]))
   }
-  
-  ## LINEAR PREDICTORS
-  for(pxt in 1:npxt){
-    thin_prob[pxt] <- ilogit(inprod(x_thin[pxt, ], beta_thin)) + beta_ent[ent[px[pxt], t[pxt]], t[pxt]]
-    for(protocol in 1:nprotocols){
-      rho[pxt, protocol] <- ilogit(inprod(x_rho[pxt, ], beta_rho) + beta_rho_protocol[protocol])
-    }
-  }
-  
+
   ## GAM ##
   K1 <- S1[1:(nspline-1),1:(nspline-1)] * lambda_gam
   
@@ -46,28 +41,27 @@ model{
   ## RANDOM EFFECTS ##
   
   for(protocol in 1:nprotocols){
-    beta_rho_protocol[protocol] ~ dnorm(0, 1/(sigma_protocol*sigma_protocol))
+    u_protocol[protocol] ~ dnorm(0, 1/(sigma_protocol*sigma_protocol))
   }
   
   for(ent in 1:nent){
-    for(yr in 1:nyear){
-      beta_ent[ent, yr] ~ dnorm(0, 1/(sigma_ent*sigma_ent))
+      u0_ent[ent] ~ dnorm(0, 1/(sigma0_ent*sigma0_ent))
+      u1_ent[ent] ~ dnorm(0, 1/(sigma1_ent*sigma0_ent))
+      u2_ent[ent] ~ dnorm(0, 1/(sigma2_ent*sigma0_ent))
     }
-  }
   
   ## PRIORS ##
   for(cov in 1:ncov_lam){
     beta_latent[cov] ~ dnorm(0, 0.01)
   }
-  for(cov in 1:ncov_thin){
-    beta_thin[cov] ~ dlogis(0, 1)
-  }
-  for(cov in 1:ncov_rho){
-    beta_rho[cov] ~ dlogis(0, 1)
-  }
+  
+  beta0_thin ~ dlogis(0, 1)
+  beta0_rho ~ dlogis(0, 1)
 
   sigma_protocol ~ dunif(0,100)
-  sigma_ent ~ dunif(0,100)
+  sigma0_ent ~ dunif(0,100)
+  sigma1_ent ~ dunif(0,100)
+  sigma2_ent ~ dunif(0,100)
   
   lambda_gam ~ dgamma(.05,.005)
   tau_gam ~ dgamma(1,1)
