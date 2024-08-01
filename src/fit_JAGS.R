@@ -28,8 +28,7 @@ L93_grid$px <- 1:nrow(L93_grid)
 ISDM_dat <- cbind(st_drop_geometry(L93_grid), effort) %>%
   pivot_longer(cols = all_of(paste0("yr.", 2009:2023)),
                names_to = "year", values_to = "ent") %>%
-  mutate(is_po_sampled = as.numeric(!is.na(ent)),
-         ent.f = as.numeric(as.factor(ent))) %>% 
+  mutate(is_po_sampled = as.numeric(!is.na(ent))) %>% 
   arrange(year, px)
 
 ### add CF data ----------------------------------------------------------------
@@ -70,9 +69,8 @@ ISDM_dat <- ISDM_dat %>%
   filter(is_po_sampled|sign(K)) %>% 
   mutate(t = as.numeric(as.factor(year)),
          protocol.fact = as.numeric(as.factor(protocol)),
-         region = as.numeric(as.factor(code_insee))) %>%
-  mutate(t2 = t*t) %>%
-  select(px, t, t2, code_insee, ent, ent.f, is_po_sampled, K, ypa, protocol,
+         ent.year = as.numeric(as.factor(paste0(t, ent)))) %>%
+  select(px, t, ent, ent.year, is_po_sampled, K, ypa, protocol,
          protocol.fact, ypo, logArea, hydroLen, ripArea, Crayfish)
 
 ### GAM Data -------------------------------------------------------------------
@@ -112,14 +110,13 @@ L93_grid <- st_drop_geometry(L93_grid)
 data.list <- list(
   npxt = nrow(ISDM_dat),
   pxts_pa = which(ISDM_dat$K>0),
-  pxts_po = which(ISDM_dat$ypo>0),
-  pxts_po_no = which(ISDM_dat$ypo==0&ISDM_dat$is_po_sampled==1),
+  pxts_po = which(ISDM_dat$is_po_sampled==1),
   nyear = length(unique(ISDM_dat$t)),
-  nent = max(ISDM_dat$ent.f),
+  nent = max(ISDM_dat$ent.year),
   px = ISDM_dat$px,
   t = ISDM_dat$t,
   t2 = ISDM_dat$t2,
-  ent = ISDM_dat$ent.f,
+  ent.yr = ISDM_dat$ent.year,
   ypa = ISDM_dat$ypa,
   K = ISDM_dat$K,
   ypo = ISDM_dat$ypo,
@@ -131,8 +128,7 @@ data.list <- list(
   nspline = length(gamDat$jags.data$zero),
   x_gam = gamDat$jags.data$X,
   S1 = gamDat$jags.data$S1,
-  zero = gamDat$jags.data$zero,
-  ones = rep(1, nrow(ISDM_dat))
+  zero = gamDat$jags.data$zero
 )
 
 inits <- foreach(i = 1:4) %do% {

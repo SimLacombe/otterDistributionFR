@@ -5,12 +5,10 @@
 ### Job name
 #SBATCH --job-name=full_model                              # Change job name
 
-### Limit run time "days-hours:minutes:seconds"
-##SBATCH --time=24:00:00                                # Max time for the job (cancelled if too long, commented line for now)
-
 ### Requirements
-##SBATCH --nodes=1
-#SBATCH --mem-per-cpu=32G
+#SBATCH --nodes=1
+#SBATCH --ntasks=4  
+#SBATCH --mem-per-cpu=8G
 #SBATCH --partition=cefe
 
 ### Email

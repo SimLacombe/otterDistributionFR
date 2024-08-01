@@ -1,9 +1,8 @@
 model{
   ## LATENT MODEL ## 
   for(pxt in 1:npxt){
-    log(lambda[pxt]) <- inprod(x_latent[pxt,], beta_latent) + inprod(x_gam[px[pxt], ], b[, t[pxt]])
-    log(lambda_B[pxt]) <- log(lambda[pxt]) + cell_area[pxt]
-    psi[pxt] <- 1 - exp(-lambda_B[pxt])
+    log(lambda[pxt]) <- inprod(x_latent[pxt,], beta_latent) + inprod(x_gam[px[pxt], ], b[, t[pxt]]) + cell_area[pxt]
+    psi[pxt] <- 1 - exp(-lambda[pxt])
     z[pxt] ~ dbern(psi[pxt])
   }
   
@@ -18,12 +17,8 @@ model{
   
   # 2. Presence only
   for(pxt in pxts_po){ 
-    thin_prob[pxt] <- ilogit(beta0_thin + u0_ent[ent[pxt]] + u1_ent[ent[pxt]] * t[pxt] + u2_ent[ent[pxt]] * t2[pxt])
-    ones[pxt] ~ dbern(exp(-lambda_B[pxt] * thin_prob[pxt]) * (lambda[pxt] * thin_prob[pxt]) ** ypo[pxt])
-  }
-  for(pxt in pxts_po_no){ 
-    thin_prob[pxt] <- ilogit(beta0_thin + u0_ent[ent[pxt]] + u1_ent[ent[pxt]] * t[pxt] + u2_ent[ent[pxt]] * t2[pxt])
-    ones[pxt] ~ dbern(exp(-lambda_B[pxt] * thin_prob[pxt]))
+    thin_prob[pxt] <- ilogit(beta0_thin + u_ent[ent.yr[pxt]])
+    ypo[pxt] ~ dpois(lambda[pxt] * thin_prob[pxt])
   }
 
   ## GAM ##
@@ -45,9 +40,7 @@ model{
   }
   
   for(ent in 1:nent){
-      u0_ent[ent] ~ dnorm(0, 1/(sigma0_ent*sigma0_ent))
-      u1_ent[ent] ~ dnorm(0, 1/(sigma1_ent*sigma0_ent))
-      u2_ent[ent] ~ dnorm(0, 1/(sigma2_ent*sigma0_ent))
+      u_ent[ent] ~ dnorm(0, 1/(sigma_ent*sigma_ent))
     }
   
   ## PRIORS ##
@@ -59,9 +52,7 @@ model{
   beta0_rho ~ dlogis(0, 1)
 
   sigma_protocol ~ dunif(0,100)
-  sigma0_ent ~ dunif(0,100)
-  sigma1_ent ~ dunif(0,100)
-  sigma2_ent ~ dunif(0,100)
+  sigma_ent ~ dunif(0,100)
   
   lambda_gam ~ dgamma(.05,.005)
   tau_gam ~ dgamma(1,1)
