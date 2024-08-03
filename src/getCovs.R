@@ -82,4 +82,4 @@ ggplot(L93_grid)+
 
 ## Save ------------------------------------------------------------------------
 
-saveRDS(L93_grid, "data/L9310x10grid_covs")
+saveRDS(L93_grid, "data/L9310x10grid_covs.rds")
