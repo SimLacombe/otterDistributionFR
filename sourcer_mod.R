@@ -31,7 +31,7 @@ jagsPar <- list(N.CHAINS = 4,
 data.filename <- "data/otterDat.rds"
 grid.filename <- "data/L9310x10grid_covs.rds"
 effort.filename <- "data/samplingEffort.rds"
-CF.filename <- "data/crayFishData.rds"
+prey.filename <- "data/preyData.rds"
 
 ### Load data ------------------------------------------------------------------
 
@@ -40,7 +40,7 @@ otterDat_full <- readRDS(data.filename)
 L93_grid_full <- readRDS(grid.filename) %>%
   st_as_sf(crs = 2154)
 
-CFdata_full <- readRDS(CF.filename) %>%
+preyData_full <- readRDS(prey.filename) %>%
   st_as_sf(crs = 2154)
 
 effort_full <- readRDS(effort.filename)

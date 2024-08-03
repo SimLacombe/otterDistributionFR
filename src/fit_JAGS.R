@@ -8,16 +8,15 @@ colnames(effort) <- paste0("yr.", 2009:2023)
 
 otterDat <- filter(otterDat_full, code_insee %in% REGIONS)
 L93_grid <- filter(L93_grid_full, code_insee %in% REGIONS)
-CFdata <- filter(CFdata_full, gridCell %in% L93_grid$gridCell) %>%
+preyData <- filter(preyData_full, gridCell %in% L93_grid$gridCell) %>%
   mutate(year = paste0("yr.", year)) %>% 
-  st_drop_geometry %>%
-  select(-data.avail)
+  st_drop_geometry
 
 ### Get offset and spatial covariates ------------------------------------------
 
 L93_grid$logArea <- log(as.numeric(st_area(L93_grid)) / 1000 ** 2)
 L93_grid$hydroLen <- c(scale(L93_grid$hydroLen))
-L93_grid$ripArea <- c(scale(L93_grid$ripArea))
+L93_grid$ripProp <- c(scale(L93_grid$ripProp))
 
 ### Get pixel identifiers ------------------------------------------------------
 
@@ -34,8 +33,9 @@ ISDM_dat <- cbind(st_drop_geometry(L93_grid), effort) %>%
 ### add CF data ----------------------------------------------------------------
 
 ISDM_dat <- ISDM_dat %>%
-  left_join(CFdata, by = c("year", "gridCell")) %>% 
-  mutate(Crayfish = as.numeric(Crayfish >= 0.75))
+  left_join(preyData, by = c("year", "gridCell")) %>% 
+  mutate(Crayfish = as.numeric(Crayfish >= 0.75),
+         Trout = as.numeric(Trout >= 0.75))
 
 ### Presence-Absence data ------------------------------------------------------
 
@@ -71,7 +71,7 @@ ISDM_dat <- ISDM_dat %>%
          protocol.fact = as.numeric(as.factor(protocol)),
          ent.year = as.numeric(as.factor(paste0(t, ent)))) %>%
   select(px, t, ent, ent.year, is_po_sampled, K, ypa, protocol,
-         protocol.fact, ypo, logArea, hydroLen, ripArea, Crayfish)
+         protocol.fact, ypo, logArea, hydroLen, ripProp, Crayfish, Trout)
 
 ### GAM Data -------------------------------------------------------------------
 
@@ -122,9 +122,9 @@ data.list <- list(
   ypo = ISDM_dat$ypo,
   nprotocols = length(unique(ISDM_dat$protocol)) - 1,
   pa_protocol = ISDM_dat$protocol.fact - 1,
-  ncov_lam = 3,
+  ncov_lam = 4,
   cell_area = ISDM_dat$logArea,
-  x_latent =  as.matrix(ISDM_dat[, c("hydroLen", "ripArea", "Crayfish")]),
+  x_latent =  as.matrix(ISDM_dat[, c("hydroLen", "ripProp", "Crayfish", "Trout")]),
   nspline = length(gamDat$jags.data$zero),
   x_gam = gamDat$jags.data$X,
   S1 = gamDat$jags.data$S1,
