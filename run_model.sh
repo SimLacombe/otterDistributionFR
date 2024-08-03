@@ -9,7 +9,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=4  
 #SBATCH --mem-per-cpu=8G
-#SBATCH --partition=defq
+#SBATCH --partition=cefe
 
 ### Email
 #SBATCH --mail-user=simon.lacombe@cefe.cnrs.fr        # Change user for e-mail notification
