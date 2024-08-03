@@ -11,6 +11,6 @@ packagetoMESOLR/*
 !data/map_fr.rds
 !data/L9310x10grid.rds
 !data/L9310x10grid_covs.rds
-!data/crayFishdata.rds
+!data/preyData.rds
 !data/samplingEffort.rds
 .Rproj.user
