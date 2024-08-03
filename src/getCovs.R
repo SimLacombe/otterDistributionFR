@@ -28,17 +28,18 @@ L93_grid <- readRDS(grid.path)%>%
 rivers.path <- "data/rivers.rds"
 
 rivers <- readRDS(rivers.path)%>%
-  # filter(ORD_CLAS <= 3) %>%
-  filter(ORD_STRA > 2) %>%
+  filter(ORD_STRA > 1) %>%
   st_as_sf(crs = 2154)
 
 ### Extract hydrological information -------------------------------------------
 
 L93_grid <- st_intersection(rivers, L93_grid) %>%
-  mutate(hydroLen = st_length(geometry)) %>%
+  mutate(hydroLen = st_length(geometry),
+         ripBuffer = st_area(st_buffer(geometry, 300))) %>%
   st_drop_geometry() %>%
   group_by(gridCell) %>%
-  summarize(hydroLen = sum(hydroLen)) %>% 
+  summarize(hydroLen = sum(hydroLen),
+            ripBuffer = sum(ripBuffer)) %>% 
   left_join(L93_grid, .) %>% 
   mutate(hydroLen = ifelse(is.na(hydroLen), 0, hydroLen))
 
@@ -64,10 +65,14 @@ L93_grid <- st_intersection(riparian_habitats, L93_grid) %>%
   left_join(L93_grid, .) %>% 
   mutate(ripArea = ifelse(is.na(ripArea), 0, ripArea))
 
+L93_grid <- L93_grid %>% 
+  mutate(ripProp = as.numeric(ripArea / ripBuffer))%>% 
+  mutate(ripProp = ifelse(is.na(ripProp), 0, ripProp))
+
 ### Plot -----------------------------------------------------------------------
 
 ggplot(L93_grid)+
-  geom_sf(aes(fill = ripArea), col = NA) +
+  geom_sf(aes(fill = ripProp), col = NA) +
   scale_fill_gradient(low = "#003300", high ="chartreuse4") +
   theme_bw()
 
