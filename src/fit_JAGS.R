@@ -154,6 +154,4 @@ mcmc <- coda.samples(
   thin = jagsPar$THIN
 )
 
-rm(mod, jagsPar, inits)
-
 out <- as.matrix(as.mcmc.list(mcmc), chains = T)

@@ -74,15 +74,15 @@ effort_full <- readRDS(effort.filename)
 
 ### 3. South-East --------------------------------------------------------------
 
-REGIONS <- c("83", "91","73", "93", "82")
-
-source("src/fit_JAGS.R")
-
-outpath <- paste0("out/","Mod_SE_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
-
-save.image(file=outpath)
-
-rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
+# REGIONS <- c("83", "91","73", "93", "82")
+# 
+# source("src/fit_JAGS.R")
+# 
+# outpath <- paste0("out/","Mod_SE_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
+# 
+# save.image(file=outpath)
+# 
+# rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
 
 # ### 4. East --------------------------------------------------------------
 
