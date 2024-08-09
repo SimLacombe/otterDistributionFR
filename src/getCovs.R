@@ -35,7 +35,7 @@ rivers <- readRDS(rivers.path)%>%
 
 L93_grid <- st_intersection(rivers, L93_grid) %>%
   mutate(hydroLen = st_length(geometry),
-         ripBuffer = st_area(st_buffer(geometry, 300))) %>%
+         ripBuffer = st_area(st_buffer(geometry, 100))) %>%
   st_drop_geometry() %>%
   group_by(gridCell) %>%
   summarize(hydroLen = sum(hydroLen),
