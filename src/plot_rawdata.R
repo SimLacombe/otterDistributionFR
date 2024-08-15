@@ -1,20 +1,7 @@
 library(tidyverse)
 library(sf)
-library(foreach)
-library(mgcv)
-
-library(rjags)
-library(coda)
 
 rm(list = ls())
-
-source("src/functions/jags_ini.R")
-
-REGIONS <- c("52", "53"," 24", "25")
-
-TIMEPERIOD <- 1 #years
-
-TIMELAG <- TIMEPERIOD - 2009 %% TIMEPERIOD
 
 ### Load data ------------------------------------------------------------------
 
@@ -27,68 +14,38 @@ otterDat <- readRDS(data.filename)
 L93_grid <- readRDS(grid.filename) %>%
   st_as_sf(crs = 2154)
 
-effort <- readRDS(effort.filename)
-
-map_FR <- readRDS("data/map_fr.rds") %>%
-  st_as_sf(crs = 2154)
-
 ### Plot full dataset ----------------------------------------------------------
 
-otterDat <- otterDat %>%
-  mutate(period = year)
-
-otterDat %>%
+stdSummary <- otterDat %>%
   filter(protocol != "PO") %>% 
-  st_drop_geometry() %>%
-  group_by(period, gridCell) %>%
-  summarize(presence = any(as.logical(presence)),
-            nsample = n()) %>%
-  left_join(L93_grid[, c("geometry", "gridCell")], by = "gridCell") %>%
-  st_as_sf %>%
-  ggplot() +
-  geom_sf(data = map_FR) +
-  geom_sf(aes(fill = presence), col = NA) +
-  geom_sf(data = otterDat %>% 
-            filter(protocol == "PO") %>% 
-            st_as_sf(coords = c("lon", "lat"),crs = 2154), aes(color = protocol), size = .125) +
-  scale_fill_manual(name = "Standardized data",
-                    values = c("orange", "chartreuse4"),
-                    labels = c("Unobserved", "present")) +
-  scale_color_manual("Opportunistic data", values = "black", label = "present") +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  guides(colour = guide_legend(title.position="top", title.hjust = 0.5),
-         fill = guide_legend(title.position="top", title.hjust = 0.5))+
-  # facet_wrap( ~ paste0(period * 4, " - ", period * 4 + 3))
-  facet_wrap( ~ period)
+  group_by(gridCell) %>%
+  summarize(presence = sign(sum(presence))) %>% 
+  left_join(L93_grid %>% select(gridCell)) %>%
+  mutate(dataType = "Standardized") %>%
+  st_as_sf(crs = 2154)
 
-### Plot sampled pixels  -------------------------------------------------------
+oppSummary <- otterDat %>%
+  filter(protocol == "PO") %>% 
+  group_by(gridCell) %>%
+  summarize(presence = sum(presence)) %>% 
+  left_join(L93_grid %>% select(gridCell)) %>%
+  mutate(dataType = "Opportunistic") %>%
+  st_as_sf(crs = 2154)
 
-periods <- (2009:2023 + TIMELAG) %/% TIMEPERIOD
+dataSummary <- rbind(stdSummary, oppSummary)
 
-effort <- effort[L93_grid$code_insee %in% REGIONS, ]
 
-if(TIMEPERIOD > 1) {
-  effort <- sapply(unique(periods), function(p) {
-    sign(apply(effort[, periods == p], 1, sum))
-  })
-}
-
-pixels <- cbind(L93_grid, effort) %>%
-  pivot_longer(cols = all_of(paste0("X", 1:15)),
-               names_to = "year", values_to = "effort") %>%
-  mutate(year = as.numeric(gsub("X", "", year))+2008)
-
-pixels <- otterDat %>% 
-  group_by(year, gridCell) %>%
-  filter(any(protocol != "PO")) %>%
-  summarize(is.sampled = 1 )%>%
-  left_join(pixels, ., by = c("year", "gridCell")) 
-
-pixels <- pixels %>%
-  mutate(is.sampled = ifelse(is.na(is.sampled), 0, is.sampled)) %>%
-  mutate(is.sampled = effort | is.sampled)
-
-ggplot(pixels) + 
-  geom_sf(aes(fill = is.sampled), col = NA) + 
-  facet_wrap(~year)
+ggplot(L93_grid) +
+  geom_sf(col = NA) + 
+  geom_sf(data = dataSummary %>% filter(dataType == "Opportunistic"),
+          aes(fill = presence), col = NA) +
+  scale_fill_gradient(name = "", trans = "log", breaks = c(2.5,10,40,160)) +
+  ggnewscale::new_scale_fill()+
+  geom_sf(data = dataSummary %>% filter(dataType == "Standardized"),
+          aes(fill = factor(presence)))+
+  scale_fill_manual(name = "", labels = c("absent", "present"), values = c("orange", "chartreuse4"))+
+  facet_wrap(~dataType) +
+  theme_bw() + 
+  theme(axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = "bottom")
