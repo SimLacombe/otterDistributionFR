@@ -17,6 +17,66 @@ add_geom2 <- function(dat, grid){
     st_as_sf(crs = 2154)
 }
 
+plot_map <- function(dat, grid, arg, show.legend = TRUE){
+  ggplot() +
+    geom_sf(data = grid, fill = "lightgrey", col = NA) +
+    geom_sf(data = dat, aes(fill = {{ arg }}), col = NA, show.legend = show.legend) +
+    theme_bw() + 
+    theme(axis.text = element_blank(),
+          axis.ticks = element_blank())
+}
+
+get_lam <- function(dat, out, XGAM){
+  
+  bbb <- out[, grep("b\\[", colnames(out))]
+  bbl <- out[, grep("beta_latent\\[", colnames(out))]
+  
+  loglam <- map(seq_along(unique(dat$t)), function(.t){
+    dat_t <- dat %>%
+      filter(t == .t) 
+    
+    bbb[,(1:20) + (.t-1)*20] %*% t(XGAM[dat_t$px,]) +
+      bbl %*% t(dat_t[, c("hydroLen", "ripProp", "Crayfish", "Trout")]) +
+      matrix(rep(dat_t$logArea, nrow(out)),
+             nrow = nrow(out),
+             ncol = nrow(dat_t),
+             byrow = TRUE)
+  })
+  
+  rm(bbb)
+  
+  loglam <- reduce(loglam, cbind)
+  exp(loglam)
+}
+
+get_psi <- function(dat, out, XGAM){
+  
+  lam <- get_lam(dat, out, XGAM)
+  psi <- 1 - exp(-lam)
+  
+  dat %>% 
+    mutate(estPsi = apply(psi, 2, mean),
+           sdPsi = apply(psi, 2, sd))
+}
+
+get_avg_occ <- function(dat, out, XGAM, quantiles = c(0.025,0.5,0.975)){
+  
+  lam <- get_lam(dat, out, XGAM)
+  psi <- 1 - exp(-lam)
+  
+  avg_occ <- map(unique(dat$t), function(t){
+    apply(psi[, which(dat$t == t)], 1, function(x){mean(as.numeric(x>0.5))}) %>% 
+      quantile(quantiles)
+  })
+  
+  avg_occ <- reduce(avg_occ, rbind)
+  rownames(avg_occ) <- 1:nrow(avg_occ)
+  colnames(avg_occ) <- c("inf", "med", "sup")
+  
+  data.frame(t = unique(dat$t) + 2008,
+             avg_occ)
+}
+
 predict_c <- function(out, grid, off, quantiles = c(0.025,0.5,0.975)){
   
   rip_values <- seq(min(grid$ripProp, na.rm = T),
@@ -70,37 +130,3 @@ predict_d <- function(out, off){
     pivot_longer(cols = c("Crayfish", "Trout"), names_to = "cov", values_to = "prob")
 }
 
-get_psi <- function(dat, out, XGAM){
-  
-  bbb <- out[, grep("b\\[", colnames(out))]
-  bbl <- out[, grep("beta_latent\\[", colnames(out))]
-  
-  ll <- map(seq_along(unique(dat$t)), function(.t){
-    dat_t <- dat %>%
-      filter(t == .t) 
-    
-    bbb[,(1:20) + (.t-1)*20] %*% t(XGAM[dat_t$px,]) +
-      bbl %*% t(dat_t[, c("hydroLen", "ripProp", "Crayfish", "Trout")]) +
-      matrix(rep(dat_t$logArea, nrow(out)),
-             nrow = nrow(out),
-             ncol = nrow(dat_t),
-             byrow = TRUE)
-  })
-  
-  rm(bbb)
-  
-  ll <- reduce(ll, cbind)
-  
-  dat %>% 
-    mutate(estPsi = apply(1 - exp(-exp(ll)), 2, mean),
-           sdPsi = apply(1 - exp(-exp(ll)), 2, sd))
-}
-
-plot_map <- function(dat, grid, arg){
-  ggplot() +
-    geom_sf(data = grid, fill = "lightgrey", col = NA) +
-    geom_sf(data = dat, aes(fill = {{ arg }}), col = NA) +
-    theme_bw() + 
-    theme(axis.text = element_blank(),
-          axis.ticks = element_blank())
-}

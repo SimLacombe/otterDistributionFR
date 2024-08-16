@@ -7,7 +7,6 @@ rm(list = ls())
 
 data.filename <- "data/otterDat.rds"
 grid.filename <- "data/L9310x10grid.rds"
-effort.filename <- "data/samplingEffort.rds"
 
 otterDat <- readRDS(data.filename)
 
@@ -33,7 +32,6 @@ oppSummary <- otterDat %>%
   st_as_sf(crs = 2154)
 
 dataSummary <- rbind(stdSummary, oppSummary)
-
 
 ggplot(L93_grid) +
   geom_sf(col = NA) + 
