@@ -1,6 +1,5 @@
 library(tidyverse)
-library(lubridate)
-library(foreach)
+library(purrr)
 library(sf)
 library(concom)
 
@@ -8,69 +7,33 @@ rm(list = ls())
 
 source("src/functions/getReplicates.R")
 
-### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CREATE GRID ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-# 
-# map_FR <- read_sf("data/regions-20140306-5m-shp/") %>%
-#   filter(code_insee %in% c("42", "72", "83", "25", "26", "53",
-#                             "24", "21", "43", "23", "11", "91",
-#                             "74", "41", "73", "31", "52", "22",
-#                             "54", "93", "82")) %>%
-#   rmapshaper::ms_simplify() %>%
-#   st_transform(crs = 2154)
-# 
-# grid <- st_make_grid(map_FR, crs = 2154,
-#                      cellsize = c(10000,10000),
-#                      offset = c(99000, 6130000)) %>%
-#   st_as_sf
-# 
-# grid <- cbind(grid, st_coordinates(st_centroid(grid))) %>%
-#   rename(geometry = x,
-#          lon = X, lat = Y) %>%
-#   mutate(gridCell = ifelse(lon >= 1000000,
-#                            paste0("E", substr(lon,1,3),"N",substr(lat,1,3)),
-#                            paste0("E0", substr(lon,1,2),"N",substr(lat,1,3)))) %>%
-#   st_join(map_FR[, "code_insee"], largest = TRUE) %>%
-#   filter(!is.na(code_insee))
-# 
-# grid2 <- grid %>%
-#   st_intersection(st_union(map_FR))
-# 
-# grid2$code_insee <- as.factor(grid2$code_insee)
-# 
-# saveRDS(grid, "data/L9310x10grid_uncropped.rds")
-# saveRDS(grid2, "data/L9310x10grid.rds")
-# saveRDS(map_FR, "data/map_fr.rds")
+grid <- readRDS("data/landscape.rds") %>%
+  st_as_sf(crs = 2154)
 
-grid <- readRDS("data/L9310x10grid_uncropped.rds") %>%
-  st_as_sf(crs = 2154)
-grid2 <- readRDS("data/L9310x10grid.rds") %>%
-  st_as_sf(crs = 2154)
-map_FR <- readRDS("data/map_fr.rds") %>%
-  st_as_sf(crs = 2154)
+map_FR <- st_union(grid)
 
 surveys <- list(transect = "IUCN",
                 pointwise = character(0))
 
-### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Load data ------------------------------------------------------------------
 
 envt <- c(ls(), "otterDat")
 
 src.path <- "src/open_datafiles"
 
-otterDat <-
-  foreach(src = list.files(src.path, full.names = TRUE),
-          .combine = rbind) %do% {
-            source(src)
-            dat
-          }
+otterDat <- map(list.files(src.path, full.names = TRUE), function(path){
+  source(path)
+  dat
+  })
+
+otterDat <- reduce(otterDat, rbind)
 
 rm(list = setdiff(ls(), envt))
 
 otterDat <-  filter(otterDat,!is.na(date),
                     year %in% 2009:2023)
 
-### Changre the protocol colomn to PO transect or punctual ---------------------
+### Change the protocol column to PO, transect or punctual ---------------------
 
 otterDat <- otterDat %>%
   mutate(protocol = ifelse(protocol %in% surveys$transect, "transect",
@@ -84,11 +47,6 @@ otterDat[is.na(otterDat$lat), c("lon", "lat")] <-
   select("gridCell") %>%
   left_join(grid[, c("lon", "lat", "gridCell")], by = "gridCell") %>%
   select(lon, lat)
-
-### Get Administrative regions -------------------------------------------------
-
-otterDat <-  left_join(otterDat, grid[, c("gridCell", "code_insee")]) %>%
-  select(-geometry)
 
 ### Indicate when observer name is missing -------------------------------------
 
@@ -174,7 +132,7 @@ otterDat_pa <- otterDat_pa %>%
   ungroup
 
 otterDat <- rbind(otterDat_pa, otterDat_BFC, otterDat_po) %>%
-  select(code_insee, dataSource, observer, protocol, year, date, presence, lon, lat, gridCell) %>% 
+  select(dataSource, observer, protocol, year, date, presence, lon, lat, gridCell) %>% 
   arrange(dataSource, protocol, year, date)
 
 rm(otterDat_pa, otterDat_po, otterDat_BFC)
@@ -183,5 +141,3 @@ rm(otterDat_pa, otterDat_po, otterDat_BFC)
 
 saveRDS(otterDat, "data/otterDat.rds")
 saveRDS(effortMat, "data/samplingEffort.rds")
-
-# otterDat <- readRDS("data/otterDat.rds")

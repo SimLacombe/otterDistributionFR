@@ -18,26 +18,24 @@ jagsPar <- list(N.CHAINS = 4,
                 MONITOR = c(
                   "b",
                   "beta_latent",
-                  "beta0_rho",
                   "beta0_thin",
-                  "u_protocol",
+                  "rho_protocol",
                   "u_ent",
-                  "sigma_protocol",
                   "sigma_ent",
                   "lambda_gam",
                   "tau_gam"
                 ))
 
 data.filename <- "data/otterDat.rds"
-grid.filename <- "data/L9310x10grid_covs.rds"
+landscape.filename <- "data/landscape.rds"
 effort.filename <- "data/samplingEffort.rds"
 prey.filename <- "data/preyData.rds"
 
 ### Load data ------------------------------------------------------------------
 
-otterDat_full <- readRDS(data.filename)
+otterDat <- readRDS(data.filename)
 
-L93_grid_full <- readRDS(grid.filename) %>%
+landscape_full <- readRDS(landscape.filename) %>%
   st_as_sf(crs = 2154)
 
 preyData_full <- readRDS(prey.filename) %>%
@@ -58,19 +56,19 @@ effort_full <- readRDS(effort.filename)
 # 
 # save.image(file=outpath)
 # 
-# rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
+# rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
 
 ### 2. North-West --------------------------------------------------------------
 
-# REGIONS <- c("52", "53"," 24", "25")
-# 
-# source("src/fit_JAGS.R")
-# 
-# outpath <- paste0("out/","Mod_NO_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
-# 
-# save.image(file=outpath)
-# 
-# rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
+REGIONS <- c("52", "53"," 24", "25")
+
+source("src/fit_JAGS.R")
+
+outpath <- paste0("out/","Mod_NO_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
+
+save.image(file=outpath)
+
+rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
 
 ### 3. South-East --------------------------------------------------------------
 
@@ -82,7 +80,7 @@ effort_full <- readRDS(effort.filename)
 # 
 # save.image(file=outpath)
 # 
-# rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
+# rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
 
 # ### 4. East --------------------------------------------------------------
 
@@ -94,4 +92,4 @@ outpath <- paste0("out/","Mod_E_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
 
 save.image(file=outpath)
 
-rm(list = setdiff(ls(), c("otterDat_full", "L93_grid_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
+rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))

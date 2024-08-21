@@ -3,7 +3,7 @@ my_inits <- function(chain){
     list(
       z = rep(1, data.list$npxt),
       beta_latent = rnorm(data.list$ncov_lam, 0, 0.25),
-      beta0_rho = rnorm(1, 0, 0.25),
+      rho_protocol = rnorm(data.list$nprotocols, 0, 0.25),
       beta0_thin = rnorm(1, 0, 0.25),
       b = matrix(
         rnorm(data.list$nspline * data.list$nyear, rep(gamDat$jags.ini$b,each = data.list$nyear),0),
@@ -11,10 +11,7 @@ my_inits <- function(chain){
         ncol = data.list$nyear, byrow = TRUE),
       lambda_gam = gamDat$jags.ini$lambda,
       tau_gam = rgamma(1,1,1),
-      sigma_protocol = runif(1, 0, 10),
-      sigma0_ent = runif(1, 0, 10),
-      sigma1_ent = runif(1, 0, 10),
-      sigma2_ent = runif(1, 0, 10),
+      sigma_ent = runif(1, 0, 10),
       .RNG.name = switch(chain,
                          "1" = "base::Wichmann-Hill",
                          "2" = "base::Wichmann-Hill",

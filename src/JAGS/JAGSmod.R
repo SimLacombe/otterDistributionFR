@@ -11,7 +11,7 @@ model{
   # K number of visits, ypa number of positive visits
   # pxts_pa : indices of pixels with at least one pa visit
   for(pxt in pxts_pa){ 
-    rho[pxt] <- ilogit(beta0_rho + u_protocol[pa_protocol[pxt]])
+    rho[pxt] <- ilogit(rho_protocol[pa_protocol[pxt]])
     ypa[pxt] ~ dbin(z[pxt] * rho[pxt], K[pxt])
   }
   
@@ -33,25 +33,24 @@ model{
     }
   }
   
-  ## RANDOM EFFECTS ##
-  
-  for(protocol in 1:nprotocols){
-    u_protocol[protocol] ~ dnorm(0, 1/(sigma_protocol*sigma_protocol))
-  }
+  ## ENTITY RANDOM EFFECT ##
   
   for(ent in 1:nent){
       u_ent[ent] ~ dnorm(0, 1/(sigma_ent*sigma_ent))
     }
   
   ## PRIORS ##
+  
   for(cov in 1:ncov_lam){
     beta_latent[cov] ~ dnorm(0, 0.01)
   }
   
   beta0_thin ~ dlogis(0, 1)
-  beta0_rho ~ dlogis(0, 1)
+  
+  for(protocol in 1:nprotocols){
+    rho_protocol ~ dlogis(0, 1)
+  }
 
-  sigma_protocol ~ dunif(0,100)
   sigma_ent ~ dunif(0,100)
   
   lambda_gam ~ dgamma(.05,.005)

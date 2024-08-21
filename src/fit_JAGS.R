@@ -1,30 +1,29 @@
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GET DATA AND COVS ~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Adapt effort matrix to sp and tmp resolution -------------------------------
 
-effort <- effort_full[L93_grid_full$code_insee %in% REGIONS, ]
+effort <- effort_full[landscape_full$code_insee %in% REGIONS, ]
 colnames(effort) <- paste0("yr.", 2009:2023)
 
 ### Filter the region of interest ----------------------------------------------
 
-otterDat <- filter(otterDat_full, code_insee %in% REGIONS)
-L93_grid <- filter(L93_grid_full, code_insee %in% REGIONS)
-preyData <- filter(preyData_full, gridCell %in% L93_grid$gridCell) %>%
+landscape <- filter(landscape_full, code_insee %in% REGIONS)
+preyData <- filter(preyData_full, gridCell %in% landscape$gridCell) %>%
   mutate(year = paste0("yr.", year)) %>% 
   st_drop_geometry
 
 ### Get offset and spatial covariates ------------------------------------------
 
-L93_grid$logArea <- log(as.numeric(st_area(L93_grid)) / 1000 ** 2)
-L93_grid$hydroLen <- c(scale(L93_grid$hydroLen))
-L93_grid$ripProp <- c(scale(L93_grid$ripProp))
+landscape$logArea <- log(as.numeric(st_area(landscape)) / 1000 ** 2)
+landscape$hydroLen <- c(scale(landscape$hydroLen))
+landscape$ripProp <- c(scale(landscape$ripProp))
 
 ### Get pixel identifiers ------------------------------------------------------
 
-L93_grid$px <- 1:nrow(L93_grid)
+landscape$px <- 1:nrow(landscape)
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~ FORMAT DATA FOR JAGS ~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
-ISDM_dat <- cbind(st_drop_geometry(L93_grid), effort) %>%
+ISDM_dat <- cbind(st_drop_geometry(landscape), effort) %>%
   pivot_longer(cols = all_of(paste0("yr.", 2009:2023)),
                names_to = "year", values_to = "ent") %>%
   mutate(is_po_sampled = as.numeric(!is.na(ent))) %>% 
@@ -40,7 +39,7 @@ ISDM_dat <- ISDM_dat %>%
 ### Presence-Absence data ------------------------------------------------------
 
 ISDM_dat <- otterDat %>%
-  filter(protocol != "PO", gridCell %in% L93_grid$gridCell) %>%
+  filter(protocol != "PO", gridCell %in% landscape$gridCell) %>%
   group_by(year, gridCell, protocol) %>%
   summarize(
     K = n(),
@@ -53,7 +52,7 @@ ISDM_dat <- otterDat %>%
 
 ISDM_dat <- otterDat %>%
   filter(protocol  == "PO",
-         gridCell %in% L93_grid$gridCell) %>%
+         gridCell %in% landscape$gridCell) %>%
   group_by(year, gridCell) %>%
   summarize(ypo = n()) %>%
   mutate(year = paste0("yr.", year)) %>%
@@ -79,7 +78,7 @@ NSPLINES = 20
 
 jags.file <- "src/JAGS/test.jags"
 
-tmpDat <- L93_grid %>%
+tmpDat <- landscape %>%
   st_centroid() %>%
   st_transform(crs = 4326) %>%
   st_coordinates() %>%
@@ -105,7 +104,7 @@ rm(tmpDat)
 gamDat$jags.ini$b[1] <- -4.6 #log area of cells
 
 ### Format data list -----------------------------------------------------------
-L93_grid <- st_drop_geometry(L93_grid)
+landscape <- st_drop_geometry(landscape)
 
 data.list <- list(
   npxt = nrow(ISDM_dat),
