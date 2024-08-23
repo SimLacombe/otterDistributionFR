@@ -29,7 +29,7 @@ ISDM_dat <- cbind(st_drop_geometry(landscape), effort) %>%
   mutate(is_po_sampled = as.numeric(!is.na(ent))) %>% 
   arrange(year, px)
 
-### add CF data ----------------------------------------------------------------
+### add prey data --------------------------------------------------------------
 
 ISDM_dat <- ISDM_dat %>%
   left_join(preyData, by = c("year", "gridCell")) %>% 
@@ -65,7 +65,7 @@ ISDM_dat <- modify(ISDM_dat, ~ ifelse(is.na(.x), 0, .x))
 ### arrange --------------------------------------------------------------------
 
 ISDM_dat <- ISDM_dat %>%
-  filter(is_po_sampled|sign(K)) %>% 
+  filter(is_po_sampled|K>0) %>% 
   mutate(t = as.numeric(as.factor(year)),
          protocol.fact = as.numeric(as.factor(protocol)),
          ent.year = as.numeric(as.factor(paste0(t, ent)))) %>%

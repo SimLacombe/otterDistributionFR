@@ -16,12 +16,15 @@ model{
   }
   
   # 2. Presence only
+  # ypo number of PO observations
+  # pxts_po : indices of pixels with non zero PO effort
   for(pxt in pxts_po){ 
     thin_prob[pxt] <- ilogit(beta0_thin + u_ent[ent.yr[pxt]])
     ypo[pxt] ~ dpois(lambda[pxt] * thin_prob[pxt])
   }
 
   ## GAM ##
+  
   K1 <- S1[1:(nspline-1),1:(nspline-1)] * lambda_gam
   
   b[1, 1] ~ dnorm(-4.6, 0.75)
@@ -41,16 +44,16 @@ model{
   
   ## PRIORS ##
   
-  for(cov in 1:ncov_lam){
-    beta_latent[cov] ~ dnorm(0, 0.01)
-  }
-  
   beta0_thin ~ dlogis(0, 1)
   
   for(protocol in 1:nprotocols){
     rho_protocol[protocol] ~ dlogis(0, 1)
   }
 
+  for(cov in 1:ncov_lam){
+    beta_latent[cov] ~ dnorm(0, 0.01)
+  }
+  
   sigma_ent ~ dunif(0,100)
   
   lambda_gam ~ dgamma(.05,.005)
