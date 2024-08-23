@@ -32,7 +32,7 @@ XGAMs <- map(envs, 4)
 
 ### MAPS FOR THE WHOLE COUNTRY -------------------------------------------------
 
-gridFull <- readRDS("data/L9310x10grid.rds")
+gridFull <- readRDS("data/landscape.rds")
 
 dats <- pmap(list(dats, outs, XGAMs), get_psi)
   
@@ -72,12 +72,19 @@ ggarrange(helper, plot.list[[1]], plot.list[[2]], plot.list[[3]],
 
 ### AVERAGE OCCUPANCY ----------------------------------------------------------
 
-avg_occ <- get_avg_occ(dats[[1]], outs[[1]], XGAMs[[1]])
+# Get habitat protection (temporary, not needed after I rerun the model)
+dats$Fr <- gridFull %>% 
+  select(gridCell, is.protected, geometry) %>%
+  left_join(select(grids$Fr, px, gridCell), .) %>%
+  select(px, is.protected, geometry) %>%
+  left_join(dats$Fr, .)
+
+avg_occ <- get_avg_occ(dats[[1]], outs[[1]], XGAMs[[1]], dats$Fr$is.protected)
 
 ggplot(avg_occ) +
-  geom_line(aes(x = t, y = med), col = "blue") + 
-  geom_ribbon(aes(x = t, ymin = inf, ymax = sup), fill = "lightblue", alpha = 0.5)+
-  xlab("")+ ylab("")+
+  geom_line(aes(x = t, y = med, col = where)) + 
+  geom_ribbon(aes(x = t, ymin = inf, ymax = sup, fill = where), alpha = 0.5)+
+  xlab("time")+ ylab("Proportion of occupied cells")+
   theme_bw()
 
 ### COVARIATE EFFECTS ----------------------------------------------------------

@@ -9,16 +9,16 @@ rivers.path <- "data/HydroRIVERS_v10_eu_shp/"
 landUse.path <- "data/CLC/"
 protectedAreas.path <- "data/protectedAreas/"
 
-TypeOfProtAreas <- c("Special Protection Area (Birds Directive)",
-                     "Site of Community Importance (Habitats Directive)",
+TypeOfProtAreas <- c(#"Special Protection Area (Birds Directive)",
+                     # "Site of Community Importance (Habitats Directive)",
                      "Parc naturel régional",
                      "Parc national, aire d'adhésion",
                      "Ramsar Site, Wetland of International Importance",
                      "Parc national, zone cœur",
-                     "Arrêté de protection de biotope",
+                     # "Arrêté de protection de biotope",
                      "Périmètre de protection d’une réserve naturelle nationale",
-                     "Réserve naturelle nationale",
-                     "Terrain acquis par le Conservatoire du Littoral")
+                     "Réserve naturelle nationale")
+                     # "Terrain acquis par le Conservatoire du Littoral")
 
 ### LOAD FR MAP ----------------------------------------------------------------
 
@@ -107,22 +107,14 @@ protectedAreas <- map(protectedAreas.filenames, read_sf,
   filter(DESIG %in% TypeOfProtAreas) 
 
 landscape <- st_intersection(grid, protectedAreas) %>%
-  mutate(areaProtected = as.numeric(st_area(geometry))) %>%
   st_drop_geometry() %>%
   group_by(gridCell) %>%
-  arrange(desc(areaProtected)) %>%
-  summarize(areaProtected = sum(areaProtected),
-            protection = DESIG[1]) %>%
+  summarize(protection = DESIG[1]) %>%
+  mutate(is.protected = as.numeric(!is.na(protection))) %>%
   left_join(landscape, .)
 
-landscape <- landscape %>% 
-  mutate(propProtected = as.numeric(areaProtected/st_area(geometry))) %>%
-  mutate(propProtected = ifelse(is.na(propProtected), 0, 
-                                ifelse(propProtected > 1, 1, propProtected))) %>%
-  mutate(protected = propProtected >= 0.33)
-
 landscape <- landscape %>%
-  select(code_insee, gridCell, lon, lat, hydroLen, ripProp, protected)
+  select(code_insee, gridCell, lon, lat, hydroLen, ripProp, is.protected)
 
 saveRDS(landscape, "data/landscape.rds")
 
@@ -136,7 +128,7 @@ plot2 <- ggplot(landscape) +
   theme_bw()
 
 plot3 <- ggplot(landscape) + 
-  geom_sf(aes(fill = protected), col = NA) +
+  geom_sf(aes(fill = factor(is.protected)), col = NA) +
   scale_fill_manual(values = c("lightgrey", "green")) +
   theme_bw()
   

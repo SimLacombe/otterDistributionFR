@@ -70,7 +70,7 @@ ISDM_dat <- ISDM_dat %>%
          protocol.fact = as.numeric(as.factor(protocol)),
          ent.year = as.numeric(as.factor(paste0(t, ent)))) %>%
   select(px, t, ent, ent.year, is_po_sampled, K, ypa, protocol,
-         protocol.fact, ypo, logArea, hydroLen, ripProp, Crayfish, Trout)
+         protocol.fact, ypo, logArea, hydroLen, ripProp, Crayfish, Trout, is.protected)
 
 ### GAM Data -------------------------------------------------------------------
 
@@ -114,7 +114,6 @@ data.list <- list(
   nent = max(ISDM_dat$ent.year),
   px = ISDM_dat$px,
   t = ISDM_dat$t,
-  t2 = ISDM_dat$t2,
   ent.yr = ISDM_dat$ent.year,
   ypa = ISDM_dat$ypa,
   K = ISDM_dat$K,

@@ -48,7 +48,7 @@ model{
   beta0_thin ~ dlogis(0, 1)
   
   for(protocol in 1:nprotocols){
-    rho_protocol ~ dlogis(0, 1)
+    rho_protocol[protocol] ~ dlogis(0, 1)
   }
 
   sigma_ent ~ dunif(0,100)
