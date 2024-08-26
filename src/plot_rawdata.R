@@ -6,7 +6,7 @@ rm(list = ls())
 ### Load data ------------------------------------------------------------------
 
 data.filename <- "data/otterDat.rds"
-grid.filename <- "data/L9310x10grid.rds"
+grid.filename <- "data/landscape.rds"
 
 otterDat <- readRDS(data.filename)
 

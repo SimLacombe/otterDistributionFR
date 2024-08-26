@@ -109,9 +109,9 @@ protectedAreas <- map(protectedAreas.filenames, read_sf,
 landscape <- st_intersection(grid, protectedAreas) %>%
   st_drop_geometry() %>%
   group_by(gridCell) %>%
-  summarize(protection = DESIG[1]) %>%
-  mutate(is.protected = as.numeric(!is.na(protection))) %>%
-  left_join(landscape, .)
+  summarize(protection = DESIG[1])  %>%
+  left_join(landscape, .) %>%
+  mutate(is.protected = !is.na(protection))
 
 landscape <- landscape %>%
   select(code_insee, gridCell, lon, lat, hydroLen, ripProp, is.protected)

@@ -96,46 +96,56 @@ otterDat <- filter(otterDat, protocol != "PO"|presence)
 
 ### filter redundant observations ----------------------------------------------
 
-# We keep only spatial replicates for the PA dataset
-# For the PO dataset, we keep one observation per day per sampling site
+otterDat_pa <- otterDat %>%
+  filter(protocol != "PO",
+         !dataSource %in% c("SHNA-OFAB", "LPO-BFC"))
 
-## 1. get site index for each observation 
+otterDat_po <- otterDat %>%
+  filter(protocol == "PO"|dataSource %in% c("SHNA-OFAB", "LPO-BFC"))
+
+## 1. We keep only spatial replicates for the PA dataset
+## a) get site index for each observation 
 # (site = sampling unit : points are less than 500 m appart)
 
-otterDat <- otterDat %>%
+otterDat_pa <- otterDat_pa %>%
   group_by(protocol, gridCell, year) %>%
   mutate(site = getSites(lon, lat, thr = 500))
 
-## 2. keep one obs per site per day 
+## b) keep one obs per site per day 
 # (present if at least one observation is made)
 
-otterDat <- otterDat %>%
+otterDat_pa <- otterDat_pa %>%
   group_by(protocol, gridCell, year, site, date) %>%
   arrange(desc(presence)) %>%
   filter(row_number()==1|dataSource %in% c("SHNA-OFAB", "LPO-BFC"))
 
-## 3. keep only one visit per site per year
+## c) keep only one visit per site per year
 # (we randomly keep one day of observation)
-
-otterDat_pa <- otterDat %>%
-  filter(protocol != "PO",
-         !dataSource %in% c("SHNA-OFAB", "LPO-BFC"))
-otterDat_po <- otterDat %>%
-  filter(protocol == "PO",
-         !dataSource %in% c("SHNA-OFAB", "LPO-BFC"))
-otterDat_BFC <- otterDat %>%
-  filter(dataSource %in% c("SHNA-OFAB", "LPO-BFC"))
 
 otterDat_pa <- otterDat_pa %>%
   group_by(protocol, gridCell, year, site) %>%
   slice_sample(n = 1) %>%
-  ungroup
+  ungroup %>%
+  select(-site)
 
-otterDat <- rbind(otterDat_pa, otterDat_BFC, otterDat_po) %>%
+## 2. Subsample the PO dataset
+
+otterDat_po <- map(unique(otterDat$year), function(yr){
+  
+  tmp <- filter(otterDat_po, year == yr) %>%
+    st_as_sf(coords = c("lon", "lat"), crs = 2154, remove = FALSE)
+  
+  tmp[subsample(tmp$geometry, thr = 10 * sqrt(2)), ] %>%
+    st_drop_geometry
+  
+}) %>% 
+  reduce(rbind)
+
+otterDat <- rbind(otterDat_pa, otterDat_po) %>%
   select(dataSource, observer, protocol, year, date, presence, lon, lat, gridCell) %>% 
   arrange(dataSource, protocol, year, date)
 
-rm(otterDat_pa, otterDat_po, otterDat_BFC)
+rm(otterDat_pa, otterDat_po)
 
 ### SAVE -----------------------------------------------------------------------
 

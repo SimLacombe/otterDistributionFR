@@ -72,13 +72,6 @@ ggarrange(helper, plot.list[[1]], plot.list[[2]], plot.list[[3]],
 
 ### AVERAGE OCCUPANCY ----------------------------------------------------------
 
-# Get habitat protection (temporary, not needed after I rerun the model)
-dats$Fr <- gridFull %>% 
-  select(gridCell, is.protected, geometry) %>%
-  left_join(select(grids$Fr, px, gridCell), .) %>%
-  select(px, is.protected, geometry) %>%
-  left_join(dats$Fr, .)
-
 avg_occ <- get_avg_occ(dats[[1]], outs[[1]], XGAMs[[1]], dats$Fr$is.protected)
 
 ggplot(avg_occ) +
