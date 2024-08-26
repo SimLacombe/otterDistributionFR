@@ -9,7 +9,6 @@ library(coda)
 rm(list = ls())
 
 source("src/functions/jags_ini.R")
-source("src/functions/subsample.R")
 
 jagsPar <- list(N.CHAINS = 4,
                 ADAPT = 1000,
