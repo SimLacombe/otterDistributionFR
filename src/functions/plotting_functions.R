@@ -1,12 +1,12 @@
 
 get_model <- function(path){
   load(path)
-  list(out, ISDM_dat, L93_grid, gamDat$jags.data$X)
+  list(out, ISDM_dat, landscape, gamDat$jags.data$X)
 }
 
 add_geom <- function(grid, gridFull){
   grid %>%
-    left_join(gridFull) %>%
+    left_join(gridFull %>% select(gridCell)) %>%
     st_as_sf(crs = 2154)
 }
 
