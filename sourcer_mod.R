@@ -12,9 +12,9 @@ source("src/functions/jags_ini.R")
 source("src/functions/subsample.R")
 
 jagsPar <- list(N.CHAINS = 4,
-                ADAPT = 500,
-                BURNIN = 2000,
-                SAMPLE = 1000,
+                ADAPT = 1000,
+                BURNIN = 10000,
+                SAMPLE = 2500,
                 THIN = 1,
                 MONITOR = c(
                   "b",
@@ -44,25 +44,6 @@ preyData_full <- readRDS(prey.filename) %>%
 
 effort_full <- readRDS(effort.filename)
 
-### Subsample PO data ----------------------------------------------------------
-
-otterDat_split <- split(otterDat, otterDat$protocol)
-
-otterDat_split$PO <- map(unique(otterDat$year), function(yr){
-  
-  tmp <- filter(otterDat_split$PO, year == yr) %>%
-    st_as_sf(coords = c("lon", "lat"), crs = 2154, remove = FALSE)
-  
-  tmp[subsample(tmp$geometry, thr = 10 * sqrt(2)), ] %>%
-    st_drop_geometry
-  
-}) %>% 
-  reduce(rbind)
-
-otterDat <- reduce(otterDat_split, rbind)
-
-rm(otterDat_split)
-
 ### 1. Full country ------------------------------------------------------------
 
 REGIONS <- c("72", "83", "25", "26", "53",
@@ -80,36 +61,36 @@ rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData
 
 ### 2. North-West --------------------------------------------------------------
 
-# REGIONS <- c("52", "53"," 24", "25")
-# 
-# source("src/fit_JAGS.R")
-# 
-# outpath <- paste0("out/","Mod_NO_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
-# 
-# save.image(file=outpath)
-# 
-# rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
+REGIONS <- c("52", "53"," 24", "25")
+
+source("src/fit_JAGS.R")
+
+outpath <- paste0("out/","Mod_NO_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
+
+save.image(file=outpath)
+
+rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
 
 ### 3. South-East --------------------------------------------------------------
 
-# REGIONS <- c("83", "91","73", "93", "82")
-# 
-# source("src/fit_JAGS.R")
-# 
-# outpath <- paste0("out/","Mod_SE_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
-# 
-# save.image(file=outpath)
-# 
-# rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
+REGIONS <- c("83", "91","73", "93", "82")
+
+source("src/fit_JAGS.R")
+
+outpath <- paste0("out/","Mod_SE_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
+
+save.image(file=outpath)
+
+rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
 
 # ### 4. East --------------------------------------------------------------
 
-# REGIONS <- c("74", "83", "26", "24", "43", "82")
-# 
-# source("src/fit_JAGS.R")
-# 
-# outpath <- paste0("out/","Mod_E_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
-# 
-# save.image(file=outpath)
-# 
-# rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
+REGIONS <- c("74", "83", "26", "24", "43", "82")
+
+source("src/fit_JAGS.R")
+
+outpath <- paste0("out/","Mod_E_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
+
+save.image(file=outpath)
+
+rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
