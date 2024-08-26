@@ -3,12 +3,12 @@
 ################################ Slurm options #################################
 
 ### Job name
-#SBATCH --job-name=full_model                              # Change job name
+#SBATCH --job-name=otterISDM                              # Change job name
 
 ### Requirements
 #SBATCH --nodes=1
 #SBATCH --ntasks=4  
-#SBATCH --mem-per-cpu=8G
+#SBATCH --mem-per-cpu=12G
 #SBATCH --partition=defq
 
 ### Email
