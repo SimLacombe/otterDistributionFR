@@ -1,7 +1,7 @@
 
 get_model <- function(path){
   load(path)
-  list(out, ISDM_dat, landscape, gamDat$jags.data$X)
+  list(mcmc, ISDM_dat, landscape, gamDat$jags.data$X)
 }
 
 add_geom <- function(grid, gridFull){
@@ -59,24 +59,21 @@ get_psi <- function(dat, out, XGAM){
            sdPsi = apply(psi, 2, sd))
 }
 
-get_avg_occ <- function(dat, out, XGAM, is.protected, quantiles = c(0.025,0.5,0.975)){
+get_avg_occ <- function(dat, out, XGAM, quantiles = c(0.025,0.5,0.975)){
   
   lam <- get_lam(dat, out, XGAM)
   psi <- 1 - exp(-lam)
   
   avg_occ <- map(unique(dat$t), function(t){
-    rbind(apply(psi[, which(dat$t == t)], 1, function(x){mean(as.numeric(x>0.5))}) %>% 
-            quantile(quantiles),
-          apply(psi[, which(dat$t == t & is.protected)], 1, function(x){mean(as.numeric(x>0.5))}) %>% 
-            quantile(quantiles))
+    apply(psi[, which(dat$t == t)], 1, function(x){mean(as.numeric(x>0.5))}) %>% 
+            quantile(quantiles)
   }) %>%
     reduce(rbind)
   
   rownames(avg_occ) <- 1:nrow(avg_occ)
   colnames(avg_occ) <- c("inf", "med", "sup")
   
-  data.frame(t = rep(unique(dat$t) + 2008, each = 2),
-             where = rep(c("whole", "protected"), length(unique(dat$t))),
+  data.frame(t = unique(dat$t) + 2008,
              avg_occ)
 }
 

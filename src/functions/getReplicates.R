@@ -36,7 +36,7 @@ subsample <- function(geometry, thr){
       units::set_units(km) %>%
       as.numeric()
     
-    ids_toprocess <- ids_toprocess[ids_toprocess %in% which(distances > thr)]
+    ids_toprocess <- ids_toprocess[ids_toprocess %in% which(distances >= thr)]
   }
   append(ids_kept, ids_toprocess)
 }

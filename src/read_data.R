@@ -55,6 +55,8 @@ otterDat <- otterDat %>%
                            "unknown",
                            observer))
 
+saveRDS(otterDat, "data/otterDatRaw.rds")
+
 ### Get sampling areas ---------------------------------------------------------
 
 datPO <-  otterDat %>%
@@ -135,7 +137,7 @@ otterDat_po <- map(unique(otterDat$year), function(yr){
   tmp <- filter(otterDat_po, year == yr) %>%
     st_as_sf(coords = c("lon", "lat"), crs = 2154, remove = FALSE)
   
-  tmp[subsample(tmp$geometry, thr = 10 * sqrt(2)), ] %>%
+  tmp[subsample(tmp$geometry, thr = 10), ] %>%
     st_drop_geometry
   
 }) %>% 
