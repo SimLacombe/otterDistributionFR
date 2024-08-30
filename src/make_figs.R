@@ -17,12 +17,14 @@ gradPsi <- scale_fill_gradient2(name = "psi",
                      high = "darkred",
                      midpoint = .5)
 
+allOut <- new.env()
+
 ### LOAD MODEL OUTPUTS ---------------------------------------------------------
 
-paths <- list(Fr = "out/Mod_full_20240827_211408.RData",
-              NO = "out/Mod_NO_20240828_024438.RData",
-              E = "out/Mod_E_20240829_024418.RData",
-              SE = "out/Mod_SE_20240828_152540.RData")
+paths <- list(Fr = "out/modFr.RData",
+              NO = "out/ModNO.RData",
+              E = "out/ModE.RData",
+              SE = "out/ModSE.RData")
 
 envs <- map(paths, get_model)
 
@@ -38,15 +40,11 @@ params_toplot <- c("beta_latent[1]","beta_latent[2]","beta_latent[3]","beta_late
                    "lambda_gam", "tau_gam", "sigma_ent",
                    "b[1,1]", "b[10,13]", "b[2,12]", "b[2,6]")
   
-diags <- map(outs, function(out){
+allOut$diags <- map(outs, function(out){
   gelman.diag(as.mcmc.list(out))
 })
 
-traces <- map(outs, function(out){
-  traceplot(as.mcmc.list(out)[, params_toplot])
-})
-
-posteriors <- map(outs, function(out){
+allOut$posteriors <- map(outs, function(out){
   out[, params_toplot] %>% 
     as.matrix(chains = TRUE) %>% 
     as.data.frame %>% 
@@ -80,7 +78,7 @@ map_sd <- plot_map(dats_toplot[[1]], grids[[1]], sdPsi, show.legend = TRUE)+
   facet_wrap(~ (t + 2008), ncol = 3) + 
   scale_fill_viridis_c(name = "", option = "plasma", breaks = c(0, 0.125, 0.25))
 
-ggarrange(map_occ, map_sd, nrow = 2, common.legend = T, legend = "bottom")
+allOut$fig1 <- ggarrange(map_occ, map_sd, nrow = 2, common.legend = T, legend = "bottom")
 
 ### MAPS FOR LOCAL MODELS ------------------------------------------------------
 
@@ -98,7 +96,7 @@ helper <- ggplot()+
   geom_sf(data = st_union(grids[[4]]), col = "lightgreen", fill = NA, linewidth = 2) +
   theme_void()
 
-ggarrange(helper, plot.list[[3]], plot.list[[1]], plot.list[[2]],
+allOut$fig2 <- ggarrange(helper, plot.list[[3]], plot.list[[1]], plot.list[[2]],
           nrow = 2, ncol = 2, align = "hv")
 
 ### AVERAGE OCCUPANCY ----------------------------------------------------------
@@ -108,7 +106,7 @@ avg_occ <- imap(avg_occ, ~ .x %>% mutate(model = .y)) %>%
   reduce(rbind) %>%
   mutate(model = factor(model, levels = names(envs)))
 
-ggplot(avg_occ) +
+allOut$fig3 <- ggplot(avg_occ) +
   geom_ribbon(aes(x = t, ymin = inf, ymax = sup, fill = model), alpha = 0.5)+
   geom_line(aes(x = t, y = med, col = model), linewidth = 1.25) + 
   xlab("time")+ ylab("Proportion of occupied cells")+
@@ -146,7 +144,7 @@ plot_d <- ggplot(pred_d) +
   xlab("") + ylab("") +
   theme_bw()
 
-ggarrange(plot_d, plot_c, nrow = 2, common.legend = T, legend = "right")
+allOut$fig4 <- ggarrange(plot_d, plot_c, nrow = 2, common.legend = T, legend = "right")
 
 ### THINNING PROBABILITY -------------------------------------------------------
 
@@ -164,9 +162,11 @@ thin_prob <- dats$Fr %>%
   cbind(u_out) %>%
   filter(!ent == 0)
 
-ggplot(thin_prob)+
+allOut$fig5 <- ggplot(thin_prob)+
   geom_ribbon(aes(x = t + 2008, ymin = inf, ymax = sup, fill = ent), alpha = 0.5, show.legend = F)+
   geom_line(aes(x = t + 2008, y = med, col = ent), show.legend = F)+
   xlab("")+ylab("")+
   theme_bw()+
   facet_wrap(~ent)
+
+save(allOut, file = "out/plots.RData")

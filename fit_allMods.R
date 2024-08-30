@@ -52,7 +52,7 @@ REGIONS <- c("72", "83", "25", "26", "53",
 
 source("src/fit_JAGS.R")
 
-outpath <- paste0("out/","Mod_full_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
+outpath <- "out/modFr.RData"
 
 save.image(file=outpath)
 
@@ -64,7 +64,7 @@ REGIONS <- c("52", "53"," 24", "25")
 
 source("src/fit_JAGS.R")
 
-outpath <- paste0("out/","Mod_NO_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
+outpath <- "out/modNO.RData"
 
 save.image(file=outpath)
 
@@ -76,20 +76,24 @@ REGIONS <- c("83", "91","73", "93", "82")
 
 source("src/fit_JAGS.R")
 
-outpath <- paste0("out/","Mod_SE_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
+outpath <- "out/modSE.RData"
 
 save.image(file=outpath)
 
 rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
 
-# ### 4. East --------------------------------------------------------------
+### 4. East --------------------------------------------------------------------
 
 REGIONS <- c("74", "83", "26", "24", "43", "82")
 
 source("src/fit_JAGS.R")
 
-outpath <- paste0("out/","Mod_E_", format(Sys.time(),"%Y%m%d_%H%M%S"), ".RData")
+outpath <- "out/modE.RData"
 
 save.image(file=outpath)
 
 rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar")))
+
+### 5. Make figs ---------------------------------------------------------------
+
+source("src/make_figs.R")
