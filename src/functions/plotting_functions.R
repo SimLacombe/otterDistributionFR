@@ -1,3 +1,6 @@
+invlogit <- function(x){
+  1/(1+exp(-x))
+}
 
 get_model <- function(path){
   load(path)
@@ -59,21 +62,26 @@ get_psi <- function(dat, out, XGAM){
            sdPsi = apply(psi, 2, sd))
 }
 
-get_avg_occ <- function(dat, out, XGAM, quantiles = c(0.025,0.5,0.975)){
+get_avg_occ <- function(dat, out, XGAM, protected, quantiles = c(0.025,0.5,0.975)){
   
   lam <- get_lam(dat, out, XGAM)
   psi <- 1 - exp(-lam)
   
   avg_occ <- map(unique(dat$t), function(t){
-    apply(psi[, which(dat$t == t)], 1, function(x){mean(as.numeric(x>0.5))}) %>% 
-            quantile(quantiles)
+    rbind(
+    apply(psi[, which((dat$t == t)&!protected)], 1, function(x){mean(as.numeric(x>0.5))}) %>%
+      quantile(quantiles),
+    apply(psi[, which((dat$t == t)&protected)], 1, function(x){mean(as.numeric(x>0.5))}) %>% 
+      quantile(quantiles))
+    
   }) %>%
     reduce(rbind)
   
   rownames(avg_occ) <- 1:nrow(avg_occ)
   colnames(avg_occ) <- c("inf", "med", "sup")
   
-  data.frame(t = unique(dat$t) + 2008,
+  data.frame(t = rep(unique(dat$t) + 2008, each = 2),
+             where = rep(c("Unprotected", "Natura2000"), length(unique(dat$t))),
              avg_occ)
 }
 

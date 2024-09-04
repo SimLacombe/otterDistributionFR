@@ -9,16 +9,16 @@ rivers.path <- "data/HydroRIVERS_v10_eu_shp/"
 landUse.path <- "data/CLC/"
 protectedAreas.path <- "data/protectedAreas/"
 
-TypeOfProtAreas <- c(#"Special Protection Area (Birds Directive)",
-                     # "Site of Community Importance (Habitats Directive)",
-                     "Parc naturel régional",
-                     "Parc national, aire d'adhésion",
-                     "Ramsar Site, Wetland of International Importance",
-                     "Parc national, zone cœur",
+TypeOfProtAreas <- c("Site of Community Importance (Habitats Directive)")
+                     # "Special Protection Area (Birds Directive)",
+                     # "Parc naturel régional",
+                     # "Parc national, aire d'adhésion",
+                     # "Ramsar Site, Wetland of International Importance",
+                     # "Parc national, zone cœur",
                      # "Arrêté de protection de biotope",
-                     "Périmètre de protection d’une réserve naturelle nationale",
-                     "Réserve naturelle nationale")
-                     # "Terrain acquis par le Conservatoire du Littoral")
+                     # "Périmètre de protection d’une réserve naturelle nationale",
+                     # "Réserve naturelle nationale",
+                     # "Terrain acquis par le Conservatoire du Littoral",
 
 ### LOAD FR MAP ----------------------------------------------------------------
 
@@ -95,7 +95,7 @@ landscape <- landscape %>%
 
 ### GET PROTECTED AREAS --------------------------------------------------------
 
-protectedAreas.filenames <- list.files(path = "data/protectedAreas/", 
+protectedAreas.filenames <- list.files(path = protectedAreas.path, 
                                        pattern = "_shp_", full.names = T)
 
 protectedAreas <- map(protectedAreas.filenames, read_sf, 
@@ -106,15 +106,20 @@ protectedAreas <- map(protectedAreas.filenames, read_sf,
   filter(ISO3 %in% c("FRA", "FRA;ESP", "FRA;ITA;MCO")) %>%
   filter(DESIG %in% TypeOfProtAreas) 
 
-landscape <- st_intersection(grid, protectedAreas) %>%
+protectedAreas <- st_intersection(protectedAreas, rivers$geometry)
+
+landscape <- st_intersection(grid, protectedAreas$geometry)%>%
+  mutate(len = st_length(geometry)) %>% 
   st_drop_geometry() %>%
   group_by(gridCell) %>%
-  summarize(protection = DESIG[1])  %>%
+  summarise(lengthProtected = as.numeric(sum(len))) %>%
   left_join(landscape, .) %>%
-  mutate(is.protected = !is.na(protection))
+  mutate(lengthProtected = ifelse(is.na(lengthProtected), 0, lengthProtected)) %>%
+  mutate(protected = lengthProtected > 5000)
+  
 
 landscape <- landscape %>%
-  select(code_insee, gridCell, lon, lat, hydroLen, ripProp, is.protected)
+  select(code_insee, gridCell, lon, lat, hydroLen, ripProp, protected)
 
 saveRDS(landscape, "data/landscape.rds")
 
@@ -128,7 +133,7 @@ plot2 <- ggplot(landscape) +
   theme_bw()
 
 plot3 <- ggplot(landscape) + 
-  geom_sf(aes(fill = factor(is.protected)), col = NA) +
+  geom_sf(aes(fill = factor(protected)), col = NA) +
   scale_fill_manual(values = c("lightgrey", "green")) +
   theme_bw()
   

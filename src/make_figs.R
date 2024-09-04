@@ -1,6 +1,5 @@
 library(tidyverse)
 library(sf)
-library(LaplacesDemon)
 library(purrr)
 library(ggpubr)
 library(rjags)
@@ -10,12 +9,6 @@ rm(list = ls())
 source("src/functions/plotting_functions.R")
 
 years_toplot <- c(2009, 2012, 2015, 2018, 2021, 2023)
-
-gradPsi <- scale_fill_gradient2(name = "psi",
-                     low = "white",
-                     mid = "orange",
-                     high = "darkred",
-                     midpoint = .5)
 
 allOut <- new.env()
 
