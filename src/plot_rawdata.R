@@ -1,9 +1,9 @@
 library(tidyverse)
 library(sf)
 
-source("src/functions/getReplicates.R")
-
 rm(list = ls())
+
+source("src/functions/getReplicates.R")
 
 ### Load data ------------------------------------------------------------------
 
@@ -56,15 +56,13 @@ ggplot(landscape) +
 ### Plot action areas ----------------------------------------------------------
 
 regions <- c("83", "91", "73", "93", "82")
-
-landscape2 <- landscape %>%
-  filter(code_insee %in% regions)
+dataSources <- c("LPO-Occitanie", "LPO-PACA", "LPO-AuRA")
 
 otterDatRaw2 <- otterDatRaw %>%
-  filter(protocol == "PO") %>%
-  filter(dataSource %in% c("LPO-Occitanie", "LPO-PACA", "LPO-AuRA"))  
+  filter(protocol == "PO")
 
 actionAreas <- otterDatRaw2 %>%
+  filter(dataSource %in% dataSources) %>%
   group_by(dataSource) %>% 
   summarize(aa = getSamplingArea(lon, lat, lvl = 0.001, 
                                  offset = st_bbox(landscape2)[c(1,3,2,4)] + c(-1,1,-1,1)*25000)) %>%
@@ -73,32 +71,32 @@ actionAreas <- otterDatRaw2 %>%
 otterDatRaw2 <- otterDatRaw2 %>%
   st_as_sf(coords = c("lon", "lat"), crs = 2154)
 
-plot1 <- ggplot(otterDatRaw2)+
-  geom_sf(data = st_union(landscape2))+
+plot1 <- ggplot(otterDatRaw2 %>% filter(dataSource %in% dataSources))+
+  geom_sf(data = landscape %>% filter(code_insee %in% regions) %>% st_union)+
   geom_sf(data = actionAreas, aes(fill = dataSource), alpha = 0.33)+
   geom_sf(aes(col = dataSource), size = 0.25)+
+  scale_fill_discrete(name = "")+
+  scale_color_discrete(name = "")+
   theme_bw()+
   theme(axis.text = element_blank(),
         axis.ticks = element_blank())
 
-years <- c(2009, 2019)
+years <- c(2009, 2014, 2019, 2023)
 
-effort2 <- effort[landscape$code_insee %in% regions, ]
-colnames(effort2) <- paste0("yr.", 2009:2023)
+colnames(effort) <- paste0("yr.", 2009:2023)
 
-landscape2 <- cbind(landscape2, effort2[, years - 2008]) %>%
+landscape2 <- cbind(landscape, effort[, years - 2008]) %>%
   pivot_longer(cols = all_of(paste0("yr.", years)), names_to = "year", values_to = "dataSource") %>%
   mutate(year = as.numeric(gsub("\\D", "", year)))
 
-plot2 <- ggplot(landscape2 %>%
-                  filter(dataSource %in% c("LPO-Occitanie", "LPO-PACA", "LPO-AuRA")))+
-  
+plot2 <- ggplot(landscape2 )+
   geom_sf(data = st_union(landscape2))+
-  geom_sf(aes(fill = dataSource), col = NA)+
+  geom_sf(aes(fill = dataSource), col = NA, show.legend = FALSE)+
   geom_sf(data = otterDatRaw2 %>% filter(year %in% years, presence == 1), size = 0.25)+
-  facet_wrap(~year, ncol = 1)+
+  facet_wrap(~year, ncol = 2)+
   theme_bw()+
   theme(axis.text = element_blank(),
         axis.ticks = element_blank())
 
-ggpubr::ggarrange(plot1, plot2, common.legend = TRUE, legend = "bottom")
+ggpubr::ggarrange(plot1, plot2, legend = "bottom")
+ 

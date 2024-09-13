@@ -29,6 +29,31 @@ plot_map <- function(dat, grid, arg, show.legend = TRUE){
           axis.ticks = element_blank())
 }
 
+get_contour_lines <- function(dat, groups = 1, res){
+
+  dat_split <- split(dat, groups)
+  
+  contour_df <- map(names(dat_split), dats = dat_split, res = res, function(i, dats, res){
+    boundary <- st_union(dats[[i]])
+    centroids <- st_coordinates(st_centroid(dats[[i]]))
+    interp_data <- akima::interp(x = centroids[, "X"], y = centroids[, "Y"], z = dats[[i]]$estPsi,
+                                 linear = TRUE, duplicate = "mean", nx = res, ny = res)
+    interp_sf <- data.frame(
+      x = rep(interp_data$x, times = length(interp_data$y)),
+      y = rep(interp_data$y, each = length(interp_data$x)),
+      z = as.vector(interp_data$z)
+    ) %>% st_as_sf(coords = c("x", "y"), crs = 2154)
+    
+    interp_clipped <- st_intersection(interp_sf, boundary)
+    interp_clipped_df <- as.data.frame(st_coordinates(interp_clipped))
+    interp_clipped_df$z <- interp_clipped$z
+    interp_clipped_df$t <- as.numeric(i)
+    
+    interp_clipped_df
+  })
+  reduce(contour_df, rbind)
+}
+
 get_lam <- function(dat, out, XGAM){
   
   bbb <- out[, grep("b\\[", colnames(out))]
@@ -62,17 +87,14 @@ get_psi <- function(dat, out, XGAM){
            sdPsi = apply(psi, 2, sd))
 }
 
-get_avg_occ <- function(dat, out, XGAM, protected, quantiles = c(0.025,0.5,0.975)){
+get_avg_occ <- function(dat, out, XGAM, thr, quantiles = c(0.025,0.5,0.975)){
   
   lam <- get_lam(dat, out, XGAM)
   psi <- 1 - exp(-lam)
   
   avg_occ <- map(unique(dat$t), function(t){
-    rbind(
-    apply(psi[, which((dat$t == t)&!protected)], 1, function(x){mean(as.numeric(x>0.5))}) %>%
-      quantile(quantiles),
-    apply(psi[, which((dat$t == t)&protected)], 1, function(x){mean(as.numeric(x>0.5))}) %>% 
-      quantile(quantiles))
+   apply(psi[, which(dat$t == t)], 1, function(x){mean(as.numeric(x>thr))}) %>%
+      quantile(quantiles)
     
   }) %>%
     reduce(rbind)
@@ -80,18 +102,17 @@ get_avg_occ <- function(dat, out, XGAM, protected, quantiles = c(0.025,0.5,0.975
   rownames(avg_occ) <- 1:nrow(avg_occ)
   colnames(avg_occ) <- c("inf", "med", "sup")
   
-  data.frame(t = rep(unique(dat$t) + 2008, each = 2),
-             where = rep(c("Unprotected", "Natura2000"), length(unique(dat$t))),
+  data.frame(t = unique(dat$t) + 2008,
              avg_occ)
 }
 
-predict_c <- function(out, grid, off, quantiles = c(0.025,0.5,0.975)){
+predict_c <- function(out, off, lims, quantiles = c(0.025,0.5,0.975)){
   
-  rip_values <- seq(min(grid$ripProp, na.rm = T),
-                    max(grid$ripProp, na.rm = T),
+  rip_values <- seq(min(lims[3], na.rm = T),
+                    max(lims[4], na.rm = T),
                     length.out = 100)
-  hydr_values <- seq(min(grid$hydroLen, na.rm = T),
-                     max(grid$hydroLen, na.rm = T),
+  hydr_values <- seq(min(lims[1], na.rm = T),
+                     max(lims[2], na.rm = T),
                      length.out = 100)
   
   pred <- matrix(0, nrow = 200, ncol = 4)
