@@ -14,8 +14,6 @@ preyData <- filter(preyData_full, gridCell %in% landscape$gridCell) %>%
 ### Get offset and spatial covariates ------------------------------------------
 
 landscape$logArea <- log(as.numeric(st_area(landscape)) / 1000 ** 2)
-landscape$hydroLen <- c(scale(landscape$hydroLen))
-landscape$ripProp <- c(scale(landscape$ripProp))
 
 ### Get pixel identifiers ------------------------------------------------------
 
@@ -70,11 +68,9 @@ ISDM_dat <- ISDM_dat %>%
          protocol.fact = as.numeric(as.factor(protocol)),
          ent.year = as.numeric(as.factor(paste0(t, ent)))) %>%
   select(px, t, ent, ent.year, is_po_sampled, K, ypa, protocol,
-         protocol.fact, ypo, logArea, hydroLen, ripProp, Crayfish, Trout, is.protected)
+         protocol.fact, ypo, logArea, hydroLen, ripProp, Crayfish, Trout)
 
 ### GAM Data -------------------------------------------------------------------
-
-NSPLINES = 20
 
 jags.file <- "src/JAGS/test.jags"
 
