@@ -54,7 +54,7 @@ get_contour_lines <- function(dat, groups = 1, res){
   reduce(contour_df, rbind)
 }
 
-get_lam <- function(dat, out, XGAM){
+get_lam <- function(dat, out, XGAM, nsplines){
   
   bbb <- out[, grep("b\\[", colnames(out))]
   bbl <- out[, grep("beta_latent\\[", colnames(out))]
@@ -63,7 +63,7 @@ get_lam <- function(dat, out, XGAM){
     dat_t <- dat %>%
       filter(t == .t) 
     
-    bbb[,(1:20) + (.t-1)*20] %*% t(XGAM[dat_t$px,]) +
+    bbb[,(1:nsplines) + (.t-1)*nsplines] %*% t(XGAM[dat_t$px,]) +
       bbl %*% t(dat_t[, c("hydroLen", "ripProp", "Crayfish", "Trout")]) +
       matrix(rep(dat_t$logArea, nrow(out)),
              nrow = nrow(out),
@@ -77,9 +77,9 @@ get_lam <- function(dat, out, XGAM){
   exp(loglam)
 }
 
-get_psi <- function(dat, out, XGAM){
+get_psi <- function(dat, out, XGAM, nsplines){
   
-  lam <- get_lam(dat, out, XGAM)
+  lam <- get_lam(dat, out, XGAM, nsplines)
   psi <- 1 - exp(-lam)
   
   dat %>% 
@@ -87,9 +87,9 @@ get_psi <- function(dat, out, XGAM){
            sdPsi = apply(psi, 2, sd))
 }
 
-get_avg_occ <- function(dat, out, XGAM, thr, quantiles = c(0.025,0.5,0.975)){
+get_avg_occ <- function(dat, out, XGAM, thr, nsplines,  quantiles = c(0.025,0.5,0.975)){
   
-  lam <- get_lam(dat, out, XGAM)
+  lam <- get_lam(dat, out, XGAM, nsplines)
   psi <- 1 - exp(-lam)
   
   avg_occ <- map(unique(dat$t), function(t){

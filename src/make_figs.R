@@ -68,7 +68,7 @@ outs <- map(outs, as.matrix)
 
 gridFull <- readRDS("data/landscape.rds")
 
-dats <- pmap(list(dats, outs, XGAMs), get_psi)
+dats <- pmap(list(dats, outs, XGAMs), get_psi, nsplines = 15)
   
 grids <- map(grids, add_geom, gridFull)
 
@@ -120,7 +120,7 @@ allOut$fig2 <- ggarrange(helper, plot.list[[3]], plot.list[[1]], plot.list[[2]],
 
 ### AVERAGE OCCUPANCY ----------------------------------------------------------
 
-avg_occ <- pmap(list(dats, outs, XGAMs, thr = 0.50), get_avg_occ)
+avg_occ <- pmap(list(dats, outs, XGAMs, thr = 0.50, nsplines = 15), get_avg_occ)
 avg_occ <- imap(avg_occ, ~ .x %>% mutate(model = .y)) %>%
   reduce(rbind) %>%
   mutate(model = factor(model, levels = names(envs)))
@@ -238,4 +238,4 @@ allOut$fig9 <- plot_map(sp_dats[[4]], grids[[4]], estPsi)+
   facet_wrap(~ (t + 2008), ncol = 3)+ 
   xlab("")+ylab("")
 
-save(allOut, file = "out/plots.RData")
+# save(allOut, file = "out/plots.RData")
