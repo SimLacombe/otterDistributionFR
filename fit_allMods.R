@@ -11,9 +11,9 @@ rm(list = ls())
 source("src/functions/jags_ini.R")
 
 jagsPar <- list(N.CHAINS = 4,
-                ADAPT = 500,
-                BURNIN = 2000,
-                SAMPLE = 500,
+                ADAPT = 1000,
+                BURNIN = 20000,
+                SAMPLE = 1000,
                 THIN = 1,
                 MONITOR = c(
                   "b",
@@ -78,29 +78,29 @@ save.image(file=outpath)
 rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar", "NSPLINES")))
 
 ### 3. South-East --------------------------------------------------------------
-# 
-# REGIONS <- c("83", "91","73", "93", "82")
-# 
-# source("src/fit_JAGS.R")
-# 
-# outpath <- "out/modSE.RData"
-# 
-# save.image(file=outpath)
-# 
-# rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar", "NSPLINES")))
-# 
+
+REGIONS <- c("83", "91","73", "93", "82")
+
+source("src/fit_JAGS.R")
+
+outpath <- "out/modSE.RData"
+
+save.image(file=outpath)
+
+rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar", "NSPLINES")))
+
 # ### 4. East --------------------------------------------------------------------
-# 
-# REGIONS <- c("74", "83", "26", "24", "43", "82")
-# 
-# source("src/fit_JAGS.R")
-# 
-# outpath <- "out/modE.RData"
-# 
-# save.image(file=outpath)
-# 
-# rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar", "NSPLINES")))
-# 
+
+REGIONS <- c("74", "83", "26", "24", "43", "82")
+
+source("src/fit_JAGS.R")
+
+outpath <- "out/modE.RData"
+
+save.image(file=outpath)
+
+rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar", "NSPLINES")))
+
 # ### 5. Make figs ---------------------------------------------------------------
 # 
 # source("src/make_figs.R")
