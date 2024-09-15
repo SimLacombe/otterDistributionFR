@@ -11,9 +11,9 @@ rm(list = ls())
 source("src/functions/jags_ini.R")
 
 jagsPar <- list(N.CHAINS = 4,
-                ADAPT = 1000,
+                ADAPT = 2000,
                 BURNIN = 20000,
-                SAMPLE = 1000,
+                SAMPLE = 2500,
                 THIN = 1,
                 MONITOR = c(
                   "b",
