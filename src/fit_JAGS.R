@@ -75,6 +75,7 @@ ISDM_dat <- ISDM_dat %>%
 jags.file <- "src/JAGS/test.jags"
 
 tmpDat <- landscape %>%
+  filter(px %in% ISDM_dat$px) %>% 
   st_centroid() %>%
   st_transform(crs = 4326) %>%
   st_coordinates() %>%
@@ -99,6 +100,9 @@ rm(tmpDat)
 
 gamDat$jags.ini$b[1] <- -4.6 #log area of cells
 
+ISDM_dat <- ISDM_dat %>%
+  mutate(idx_gam = as.numeric(as.factor(px)))
+
 ### Format data list -----------------------------------------------------------
 landscape <- st_drop_geometry(landscape)
 
@@ -108,7 +112,7 @@ data.list <- list(
   pxts_po = which(ISDM_dat$is_po_sampled==1),
   nyear = length(unique(ISDM_dat$t)),
   nent = max(ISDM_dat$ent.year),
-  px = ISDM_dat$px,
+  px = ISDM_dat$idx_gam,
   t = ISDM_dat$t,
   ent.yr = ISDM_dat$ent.year,
   ypa = ISDM_dat$ypa,
