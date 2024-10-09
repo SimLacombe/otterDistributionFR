@@ -106,6 +106,8 @@ ISDM_dat <- ISDM_dat %>%
 ### Format data list -----------------------------------------------------------
 landscape <- st_drop_geometry(landscape)
 
+if(!randomEffect) {ISDM_dat$ent.year <- 1}
+
 data.list <- list(
   npxt = nrow(ISDM_dat),
   pxts_pa = which(ISDM_dat$K>0),
