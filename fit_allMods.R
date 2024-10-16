@@ -11,9 +11,9 @@ rm(list = ls())
 source("src/functions/jags_ini.R")
 
 jagsPar <- list(N.CHAINS = 4,
-                ADAPT = 2000,
-                BURNIN = 30000,
-                SAMPLE = 2500,
+                ADAPT = 500,
+                BURNIN = 10000,
+                SAMPLE = 1000,
                 THIN = 1,
                 MONITOR = c(
                   "b",
@@ -31,7 +31,7 @@ landscape.filename <- "data/landscape.rds"
 effort.filename <- "data/samplingEffort.rds"
 prey.filename <- "data/preyData.rds"
 
-NSPLINES <- 20
+NSPLINES <- 15
 
 ### Load data ------------------------------------------------------------------
 
@@ -49,35 +49,35 @@ preyData_full <- readRDS(prey.filename) %>%
 effort_full <- readRDS(effort.filename)
 
 ### 1. Full country ------------------------------------------------------------
-# 
-# randomEffect <- TRUE
-# 
-# REGIONS <- c("72", "83", "25", "26", "53",
-#              "24", "43", "23", "91",
-#              "74", "73", "52", "22", "11", "31",
-#              "54", "93", "82", "42", "21", "41")
-# 
-# source("src/fit_JAGS.R")
-# 
-# outpath <- "out/modFr.RData"
-# 
-# save.image(file=outpath)
-# 
-# rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar", "NSPLINES")))
+
+randomEffect <- TRUE
+
+REGIONS <- c("72", "83", "25", "26", "53",
+             "24", "43", "23", "91",
+             "74", "73", "52", "22", "11", "31",
+             "54", "93", "82", "42", "21", "41")
+
+source("src/fit_JAGS.R")
+
+outpath <- "out/modFr.RData"
+
+save.image(file=outpath)
+
+rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar", "NSPLINES")))
 
 ### 2. North-West --------------------------------------------------------------
-# 
-# randomEffect <- FALSE
-# 
-# REGIONS <- c("52", "53"," 24", "25")
-# 
-# source("src/fit_JAGS.R")
-# 
-# outpath <- "out/modNO.RData"
-# 
-# save.image(file=outpath)
-# 
-# rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar", "NSPLINES")))
+
+randomEffect <- FALSE
+
+REGIONS <- c("52", "53"," 24", "25")
+
+source("src/fit_JAGS.R")
+
+outpath <- "out/modNO.RData"
+
+save.image(file=outpath)
+
+rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData_full", "my_inits", "jagsPar", "NSPLINES")))
 
 ### 3. South-East --------------------------------------------------------------
 
