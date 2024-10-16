@@ -106,8 +106,6 @@ ISDM_dat <- ISDM_dat %>%
 ### Format data list -----------------------------------------------------------
 landscape <- st_drop_geometry(landscape)
 
-if(!randomEffect) {ISDM_dat$ent.year <- 1}
-
 data.list <- list(
   npxt = nrow(ISDM_dat),
   pxts_pa = which(ISDM_dat$K>0),
@@ -138,12 +136,21 @@ inits <- foreach(i = 1:4) %do% {
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ RUN MODEL ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### Call jags ------------------------------------------------------------------
 
-mod <- jags.model(
-  file = "src/JAGS/JAGSmod.R",
-  data = data.list,
-  inits = inits,
-  n.chains = jagsPar$N.CHAINS,
-  n.adapt = jagsPar$ADAPT)
+if(randomEffect) {
+  mod <- jags.model(
+    file = "src/JAGS/JAGSmod.R",
+    data = data.list,
+    inits = inits,
+    n.chains = jagsPar$N.CHAINS,
+    n.adapt = jagsPar$ADAPT)
+} else {
+  mod <- jags.model(
+    file = "src/JAGS/JAGSmod_noRE.R",
+    data = data.list,
+    inits = inits,
+    n.chains = jagsPar$N.CHAINS,
+    n.adapt = jagsPar$ADAPT)
+}
 
 update(mod, jagsPar$BURNIN)
 
