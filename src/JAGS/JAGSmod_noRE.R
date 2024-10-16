@@ -19,7 +19,7 @@ model{
   # ypo number of PO observations
   # pxts_po : indices of pixels with non zero PO effort
   for(pxt in pxts_po){ 
-    thin_prob[pxt] <- ilogit(beta0_thin + u_ent[ent.yr[pxt]])
+    thin_prob[pxt] <- ilogit(beta0_thin)
     ypo[pxt] ~ dpois(lambda[pxt] * thin_prob[pxt])
   }
 
@@ -36,12 +36,6 @@ model{
     }
   }
   
-  ## ENTITY RANDOM EFFECT ##
-  
-  for(ent in 1:nent){
-      u_ent[ent] ~ dnorm(0, 1/(sigma_ent*sigma_ent))
-    }
-  
   ## PRIORS ##
   
   beta0_thin ~ dlogis(0, 1)
@@ -53,8 +47,6 @@ model{
   for(cov in 1:ncov_lam){
     beta_latent[cov] ~ dnorm(0, 0.01)
   }
-  
-  sigma_ent ~ dunif(0,100)
   
   lambda_gam ~ dgamma(1,.5)
   tau_gam ~ dgamma(1,1)
