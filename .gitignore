@@ -12,7 +12,7 @@ out/*
 !data/preyData.rds
 !data/samplingEffort.rds
 .Rproj.user
-src/open_datailes/*
+src/open_datafiles/*
 src/read_data.R
 src/extract_GMB_data.R
 src/get_landscape.R
