@@ -6,10 +6,14 @@
 data/*
 plots/*
 out/*
-packagetoMESOLR/*
 !data/otterDat.rds
 !data/map_fr.rds
 !data/landscape.rds
 !data/preyData.rds
 !data/samplingEffort.rds
 .Rproj.user
+src/open_datailes/*
+src/read_data.R
+src/extract_GMB_data.R
+src/get_landscape.R
+src/get_preyAvail.R

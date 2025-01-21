@@ -69,7 +69,7 @@ rm(list = setdiff(ls(), c("otterDat", "landscape_full", "effort_full", "preyData
 
 randomEffect <- FALSE
 
-REGIONS <- c("52", "53"," 24", "25")
+REGIONS <- c("52", "53","54", "24", "25")
 
 source("src/fit_JAGS.R")
 

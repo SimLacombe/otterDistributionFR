@@ -4,6 +4,9 @@ library(sf)
 rm(list = ls())
 
 source("src/functions/getReplicates.R")
+source("src/functions/plotting_functions.R")
+
+colors_local <- c("plum2", "lightblue", "lightgreen")
 
 ### Load data ------------------------------------------------------------------
 
@@ -18,6 +21,18 @@ effort <- readRDS(effort.filename)
 landscape <- readRDS(grid.filename) %>%
   st_as_sf(crs = 2154)
 
+paths <- list(National = "out/modFr.RData",
+              NW = "out/ModNO.RData",
+              Center = "out/ModE.RData",
+              SE = "out/ModSE.RData")
+
+envs <- map(paths, get_model)
+
+grids <- map(envs, 3)
+grids <- map(grids, add_geom, landscape)
+
+rm(envs)
+
 ### Plot full dataset ----------------------------------------------------------
 
 stdSummary <- otterDat %>%
@@ -25,7 +40,7 @@ stdSummary <- otterDat %>%
   group_by(gridCell) %>%
   summarize(presence = sign(sum(presence))) %>% 
   left_join(landscape %>% select(gridCell)) %>%
-  mutate(dataType = "Standardized") %>%
+  mutate(dataType = "Standardized data") %>%
   st_as_sf(crs = 2154)
 
 oppSummary <- otterDat %>%
@@ -33,25 +48,54 @@ oppSummary <- otterDat %>%
   group_by(gridCell) %>%
   summarize(presence = sum(presence)) %>% 
   left_join(landscape %>% select(gridCell)) %>%
-  mutate(dataType = "Opportunistic") %>%
+  mutate(dataType = "Opportunistic data") %>%
   st_as_sf(crs = 2154)
 
 dataSummary <- rbind(stdSummary, oppSummary)
 
+grids[[1]]$region <- case_match(grids[[1]]$code_insee,
+                                "11" ~ "IdF",
+                                "24" ~ "CvL",
+                                c("26", "43") ~ "BFC",
+                                c("23", "25") ~ "Nor",
+                                c("22", "31") ~ "HdF",
+                                c("21", "41", "42") ~ "GE",
+                                "52" ~ "PdL",
+                                "53" ~ "Bre",
+                                c("54", "72", "74") ~ "NAq",
+                                c("73", "91") ~ "Occ",
+                                c("82", "83") ~ "ARA",
+                                "93" ~ "PACA")
+regions <- grids[[1]] %>% 
+  group_by(region) %>% 
+  summarize %>%
+  mutate(dataType = "Extent of the local models")
+
 ggplot(landscape) +
   geom_sf(col = NA) + 
-  geom_sf(data = dataSummary %>% filter(dataType == "Opportunistic"),
-          aes(fill = presence), col = NA) +
-  scale_fill_gradient(name = "", trans = "log", breaks = c(2.5,10,40,160)) +
-  ggnewscale::new_scale_fill()+
-  geom_sf(data = dataSummary %>% filter(dataType == "Standardized"),
+  geom_sf(data = regions)+
+  geom_sf(data = st_union(grids[[2]])  %>% st_as_sf %>% mutate(dataType = "Extent of the local models"),
+          col = colors_local[1], fill = NA, linewidth = 2) +
+  geom_sf(data = st_union(grids[[3]])  %>% st_as_sf %>% mutate(dataType = "Extent of the local models"),
+          col = colors_local[2], fill = NA, linewidth = 2) +
+  geom_sf(data = st_union(grids[[4]])  %>% st_as_sf %>% mutate(dataType = "Extent of the local models"),
+          col = colors_local[3], fill = NA, linewidth = 2) +
+  geom_sf_text(data = regions, aes(label = region)) +
+  geom_sf(data = dataSummary %>% filter(dataType == "Standardized data"),
           aes(fill = factor(presence)))+
-  scale_fill_manual(name = "", labels = c("absent", "present"), values = c("orange", "chartreuse4"))+
+  scale_fill_manual(name = " ", labels = c("Non-detection", "Presence"), values = c("orange", "chartreuse4"))+
+  guides(fill = guide_legend(title.position="top", title.hjust = 0.5))+
+  ggnewscale::new_scale_fill()+
+  geom_sf(data = dataSummary %>% filter(dataType == "Opportunistic data"),
+          aes(fill = presence), col = NA) +
+  scale_fill_gradient(name = "Number of detections", trans = "log", breaks = c(2.5,10,40,160)) +
   facet_wrap(~dataType) +
   theme_bw() + 
   theme(axis.text = element_blank(),
         axis.ticks = element_blank(),
-        legend.position = "bottom")
+        legend.position = "bottom")+
+  guides(fill = guide_colourbar(title.position="top", title.hjust = 0.5))+
+  xlab("") + ylab("")
 
 ### Plot action areas ----------------------------------------------------------
 

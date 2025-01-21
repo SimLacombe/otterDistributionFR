@@ -63,7 +63,7 @@ get_lam <- function(dat, out, XGAM, nsplines){
     dat_t <- dat %>%
       filter(t == .t) 
     
-    bbb[,(1:nsplines) + (.t-1)*nsplines] %*% t(XGAM[dat_t$px,]) +
+    bbb[,(1:nsplines) + (.t-1)*nsplines] %*% t(XGAM[dat_t$idx_gam,]) +
       bbl %*% t(dat_t[, c("hydroLen", "ripProp", "Crayfish", "Trout")]) +
       matrix(rep(dat_t$logArea, nrow(out)),
              nrow = nrow(out),
@@ -154,8 +154,8 @@ predict_d <- function(out, off){
   predPsi <- 1 - exp(-predLam)
   
   data.frame(Crayfish = c(predPsi[,1], predPsi[,2]),
-             Trout = c(predPsi[,3], predPsi[,4]),
+             Salmonids = c(predPsi[,3], predPsi[,4]),
              x = rep(c("absent", "present"), each = nrow(predPsi))) %>%
-    pivot_longer(cols = c("Crayfish", "Trout"), names_to = "cov", values_to = "prob")
+    pivot_longer(cols = c("Crayfish", "Salmonids"), names_to = "cov", values_to = "prob")
 }
 

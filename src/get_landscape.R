@@ -7,18 +7,6 @@ rm(list = ls())
 map.path <- "data/regions-20140306-5m-shp/"
 rivers.path <- "data/HydroRIVERS_v10_eu_shp/"
 landUse.path <- "data/CLC/"
-protectedAreas.path <- "data/protectedAreas/"
-
-TypeOfProtAreas <- c("Site of Community Importance (Habitats Directive)")
-                     # "Special Protection Area (Birds Directive)",
-                     # "Parc naturel régional",
-                     # "Parc national, aire d'adhésion",
-                     # "Ramsar Site, Wetland of International Importance",
-                     # "Parc national, zone cœur",
-                     # "Arrêté de protection de biotope",
-                     # "Périmètre de protection d’une réserve naturelle nationale",
-                     # "Réserve naturelle nationale",
-                     # "Terrain acquis par le Conservatoire du Littoral",
 
 ### LOAD FR MAP ----------------------------------------------------------------
 
@@ -93,48 +81,15 @@ landscape <- landscape %>%
   mutate(ripProp = as.numeric(ripArea / ripBuffer))%>% 
   mutate(ripProp = ifelse(is.na(ripProp), 0, ripProp))
 
-### GET PROTECTED AREAS --------------------------------------------------------
-
-protectedAreas.filenames <- list.files(path = protectedAreas.path, 
-                                       pattern = "_shp_", full.names = T)
-
-protectedAreas <- map(protectedAreas.filenames, read_sf, 
-                      layer = "WDPA_WDOECM_Aug2024_Public_FRA_shp-polygons") %>%
-  reduce(rbind) %>% 
-  st_simplify(dTolerance = 10) %>%
-  st_transform(crs = 2154) %>%
-  filter(ISO3 %in% c("FRA", "FRA;ESP", "FRA;ITA;MCO")) %>%
-  filter(DESIG %in% TypeOfProtAreas) 
-
-protectedAreas <- st_intersection(protectedAreas, rivers$geometry)
-
-landscape <- st_intersection(grid, protectedAreas$geometry)%>%
-  mutate(len = st_length(geometry)) %>% 
-  st_drop_geometry() %>%
-  group_by(gridCell) %>%
-  summarise(lengthProtected = as.numeric(sum(len))) %>%
-  left_join(landscape, .) %>%
-  mutate(lengthProtected = ifelse(is.na(lengthProtected), 0, lengthProtected)) %>%
-  mutate(protected = lengthProtected > 5000)
-  
-
-landscape <- landscape %>%
-  select(code_insee, gridCell, lon, lat, hydroLen, ripProp, protected)
-
 saveRDS(landscape, "data/landscape.rds")
 
 plot1 <- ggplot(landscape) + 
-  geom_sf(aes(fill = hydroLen), col = NA) +
-  theme_bw()
+geom_sf(aes(fill = hydroLen), col = NA) +
+theme_bw()
 
 plot2 <- ggplot(landscape) + 
   geom_sf(aes(fill = ripProp), col = NA) +
   scale_fill_gradient(low = "#003300", high ="chartreuse4") +
   theme_bw()
 
-plot3 <- ggplot(landscape) + 
-  geom_sf(aes(fill = factor(protected)), col = NA) +
-  scale_fill_manual(values = c("lightgrey", "green")) +
-  theme_bw()
-  
-ggpubr::ggarrange(plot1, plot2, plot3)
+ggpubr::ggarrange(plot1, plot2)
